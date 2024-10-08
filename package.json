@@ -1,0 +1,32 @@
+{
+  "name": "api-app",
+  "version": "1.0.0",
+  "description": "Esta é uma API RESTful desenvolvida em Node.js utilizando o framework Express para gerenciar dados de cinco diferentes aplicativos: moda, culinária, engenharia, estética e veterinária. Esta API permite o cadastro de usuários, gerenciamento de postagens e integração entre os diferentes apps.",
+  "main": "app.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AAndreLuis-dev/api-app.git"
+  },
+  "author": "Andre Luis",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AAndreLuis-dev/api-app/issues"
+  },
+  "homepage": "https://github.com/AAndreLuis-dev/api-app#readme",
+  "devDependencies": {
+    "express": "^4.21.0",
+    "nodemon": "^3.1.7"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0"
+  }
+}

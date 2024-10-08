@@ -1,0 +1,46 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# Database files
+*.sqlite
+*.sqlite3
+
+# Build outputs
+dist/
+build/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test Coverage
+coverage/
+
+# Miscellaneous
+*.tgz
+*.
