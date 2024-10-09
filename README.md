@@ -7,7 +7,7 @@ Esta é uma API RESTful desenvolvida em Node.js utilizando o framework Express p
 - **Node.js**: Plataforma de desenvolvimento back-end.
 - **Express**: Framework web para criar a API RESTful.
 - **Sequelize** ORM para interação com o banco de dados SQL.
-- **MySQL**: Banco de dados relacional.
+- **PostgreSQL**: Banco de dados relacional.
 - **JWT (JsonWebToken)**: Autenticação e segurança de rotas.
 - **Jest**: Framework de testes unitários e de integração.
 - **Swagger**: Documentação da API.

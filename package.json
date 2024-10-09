@@ -26,6 +26,8 @@
     "nodemon": "^3.1.7"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "argon2": "^0.41.1",
     "cors": "^2.8.5",
     "helmet": "^8.0.0"
   }
