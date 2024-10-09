@@ -1,5 +1,5 @@
-import User from '../models/User';
-import { supabase } from '../supabase/client';
+import User from '../models/User.js';
+import { supabase } from '../supabase/client.js';
 
 class UserController {
     async store(req, res) {
