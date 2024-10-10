@@ -13,7 +13,15 @@ class UserController {
 
             const savedUser = await user.save();
 
-            const { email, nome, telefone, nivelDeConcientizacao, isMonitor } = savedUser[0];
+            console.log('Usuário salvo:', savedUser);
+
+            if (!savedUser || (Array.isArray(savedUser) && savedUser.length === 0) || !savedUser[0]) {
+                return res.status(400).json({
+                    errors: ['Falha ao salvar o usuário no banco de dados.'],
+                });
+            }
+
+            const { email, nome, telefone, nivelDeConcientizacao, isMonitor } = Array.isArray(savedUser) ? savedUser[0] : savedUser;
             return res.json({ email, nome, telefone, nivelDeConcientizacao, isMonitor });
 
         } catch (e) {
@@ -26,8 +34,8 @@ class UserController {
     async index(req, res) {
         try {
             const { data: users, error } = await supabase
-                .from('Usuarios')
-                .select('email, nome, telefone, nivelDeConcientizacao, isMonitor');
+                .from('usuarios')
+                .select('email, nome, telefone, niveldeconcientizacao, ismonitor');
 
             if (error) throw error;
 
@@ -43,8 +51,8 @@ class UserController {
     async show(req, res) {
         try {
             const { data: user, error } = await supabase
-                .from('Usuarios')
-                .select('email, nome, telefone, nivelDeConcientizacao, isMonitor')
+                .from('usuarios')
+                .select('email, nome, telefone, niveldeconcientizacao, ismonitor')
                 .eq('email', req.params.email)
                 .single();
 
@@ -66,9 +74,9 @@ class UserController {
     async update(req, res) {
         try {
             const { data: user, error: fetchError } = await supabase
-                .from('Usuarios')
+                .from('usuarios')
                 .select('*')
-                .eq('email', req.userEmail)
+                .eq('email', req.params.email)
                 .single();
 
             if (fetchError || !user) {
@@ -78,9 +86,9 @@ class UserController {
             }
 
             const { error: updateError } = await supabase
-                .from('Usuarios')
+                .from('usuarios')
                 .update(req.body)
-                .eq('email', req.userEmail);
+                .eq('email', req.params.email);
 
             if (updateError) throw updateError;
 
@@ -96,9 +104,9 @@ class UserController {
     async delete(req, res) {
         try {
             const { data: user, error: fetchError } = await supabase
-                .from('Usuarios')
+                .from('usuarios')
                 .select('*')
-                .eq('email', req.userEmail)
+                .eq('email', req.params.email)
                 .single();
 
             if (fetchError || !user) {
@@ -108,9 +116,9 @@ class UserController {
             }
 
             const { error: deleteError } = await supabase
-                .from('Usuarios')
+                .from('usuarios')
                 .delete()
-                .eq('email', req.userEmail);
+                .eq('email', req.params.email);
 
             if (deleteError) throw deleteError;
 

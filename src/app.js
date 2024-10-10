@@ -5,7 +5,7 @@ import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
 
 const whiteList = [
-  'http://localhost:3000',
+  'http://localhost:3000/',
 ];
 
 const corsOptions = {

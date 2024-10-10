@@ -7,8 +7,8 @@ const router = new Router();
 
 router.get('/usuario', userController.index);
 router.post('/usuario', userController.store);
-router.put('/usuario/:id', userController.update);
-router.get('/usuario/:id', userController.show);
-router.delete('/usuario/:id', userController.delete);
+router.put('/usuario/:email', userController.update);
+router.get('/usuario/:email', userController.show);
+router.delete('/usuario/:email', userController.delete);
 
 export default router;

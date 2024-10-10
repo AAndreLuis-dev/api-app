@@ -2,38 +2,43 @@ import { supabase } from '../supabase/client.js'; // Importa o cliente Supabase 
 import argon2 from 'argon2';
 
 class User {
-    constructor({ email, password, nome, telefone, nivelDeConcientizacao, isMonitor }) {
+    constructor({ email, tokens, senha, nome, telefone, niveldeconcientizacao, ismonitor }) {
         this.email = email;
-        this.password = password;
+        this.tokens = tokens;
+        this.senha = senha;
         this.nome = nome;
         this.telefone = telefone;
-        this.nivelDeConcientizacao = nivelDeConcientizacao;
-        this.isMonitor = isMonitor;
+        this.niveldeconcientizacao = niveldeconcientizacao;
+        this.ismonitor = ismonitor;
     }
 
 
     validate() {
         const errors = [];
 
-        if (this.nome.length < 3 || this.nome.length > 255) {
-            errors.push('Nome deve ter entre 3 e 255 caracteres.');
+        if (!this.nome || this.nome.length < 3 || this.nome.length > 51) {
+            errors.push('Nome deve ter entre 3 e 51 caracteres.');
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(this.email)) {
+        if (!this.email || !emailRegex.test(this.email)) {
             errors.push('Email inválido.');
         }
 
+        if (typeof this.tokens !== 'string'){
+            errors.push('token invalido')
+        }
+
         const telefoneRegex = /^\+?[1-9]\d{1,14}$/;
-        if (!telefoneRegex.test(this.telefone)) {
+        if (!this.telefone || !telefoneRegex.test(this.telefone)) {
             errors.push('Número de telefone inválido.');
         }
 
-        if (this.password.length < 6 || this.password.length > 50) {
-            errors.push('A senha precisa ter entre 6 e 50 caracteres.');
+        if (!this.senha || this.senha.length < 6 || this.senha.length > 255) {
+            errors.push('A senha precisa ter entre 6 e 21 caracteres.');
         }
 
-        if (typeof this.nivelDeConcientizacao !== 'number' || this.nivelDeConcientizacao < 0 || this.nivelDeConcientizacao > 5) {
+        if (typeof this.niveldeconcientizacao !== 'number' || this.niveldeconcientizacao < 0 || this.niveldeconcientizacao > 5) {
             errors.push('Nível de conscientização deve ser um número entre 0 e 5.');
         }
 
@@ -44,21 +49,24 @@ class User {
         return { valid: true };
     }
 
+
     async save() {
-        const password_hash = await argon2.hash(this.password);
+        const password_hash = await argon2.hash(this.senha);
 
         const { data, error } = await supabase
-            .from('users')
+            .from('usuarios')
             .insert([
                 {
                     email: this.email,
-                    password_hash: password_hash,
+                    tokens: this.tokens,
+                    senha: password_hash,
                     nome: this.nome,
                     telefone: this.telefone,
-                    nivelDeConcientizacao: this.nivelDeConcientizacao,
-                    isMonitor: this.isMonitor
+                    niveldeconcientizacao: this.niveldeconcientizacao,
+                    ismonitor: this.ismonitor
                 },
-            ]);
+            ])
+            .select();
 
         if (error) {
             throw new Error(error.message);
