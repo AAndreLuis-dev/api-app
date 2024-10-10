@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
+import temaRoutes from './routes/temaRoutes.js';  // Adicionar as rotas de temas
 
 const whiteList = [
   'http://localhost:3000/',
