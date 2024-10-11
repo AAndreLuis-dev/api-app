@@ -1,4 +1,4 @@
-import { Router } from 'express';
+/* import { Router } from 'express';
 import ingredienteController from '../controllers/ingredienteController.js';
 
 const router = new Router();
@@ -10,3 +10,4 @@ router.get('/ingredientes/:ingredienteId', ingredienteController.show);
 router.delete('/ingredientes/:ingredienteId', ingredienteController.delete);
 
 export default router;
+ */
