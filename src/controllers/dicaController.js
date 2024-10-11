@@ -3,11 +3,10 @@ import { supabase } from '../supabase/client.js';
 
 class DicaController {
 
-    // Create
-    async store(req, res) {
+    async create(req, res) {
         try {
             const dica = new Dica(req.body);
-
+            console.log(dica);
             const { valid, errors } = dica.validate();
 
             if (!valid) {
@@ -18,10 +17,13 @@ class DicaController {
                 .from('dicas')
                 .insert([
                     {
+                        codigo: dica.codigo || null,
                         nomecriador: dica.nomeCriador,
                         conteudo: dica.conteudo,
                         tema: dica.tema,
-                        categoria: dica.categoria
+                        categoria: dica.categoria,
+                        Isverificada: dica.isAprovado,
+                        AprovadoPor: dica.aprovadoPor
                     },
                 ])
                 .select();
@@ -30,16 +32,16 @@ class DicaController {
 
             return res.status(201).json({ message: 'Dica criada com sucesso', data: data });
         } catch (e) {
+            console.log(e);
             handleError(res, e.message)
         }
     }
 
-    // Read all
-    async index(req, res) {
+    async getAll(req, res) {
         try {
             const { data: dicas, error } = await supabase
                 .from('dicas')
-                .select('*');
+                .select();
 
             if (error) throw error;
 
@@ -50,8 +52,7 @@ class DicaController {
     }
 
 
-    // Read one by code
-    async show(req, res) {
+    async getByCode(req, res) {
         try {
             const { data: dica, error } = await supabase
                 .from('dicas')
@@ -86,7 +87,9 @@ class DicaController {
                     nomecriador: newDica.nomeCriador,
                     conteudo: newDica.conteudo,
                     tema: newDica.tema,
-                    categoria: newDica.categoria
+                    categoria: newDica.categoria,
+                    Isverificada: newDica.isAprovado,
+                    AprovadoPor: newDica.aprovadoPor
                 }])
                 .eq('codigo', req.params.codigo)
                 .select();
@@ -106,7 +109,7 @@ class DicaController {
 
     async delete(req, res) {
         try {
-            console.log(req.params.codigo)
+
             const { data, error: deleteError } = await supabase
                 .from('dicas')
                 .delete()
