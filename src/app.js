@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
+/* import ingredientesRoutes from './routes/ingredienteRoutes.js' */
+
 
 const whiteList = [
   'http://localhost:3000/',
@@ -36,6 +38,7 @@ class App {
     routes() {
         this.app.use('/api', userRoutes);
         this.app.use('/api', dicasRoutes);
+        // this.app.use('/api', ingredientesRoutes);
     }
 
     start() {

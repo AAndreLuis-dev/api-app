@@ -3,8 +3,7 @@ import { supabase } from '../supabase/client.js';
 
 class DicaController {
 
-    // Create
-    async store(req, res) {
+    async create(req, res) {
         try {
             const dica = new Dica(req.body);
             console.log(dica);
@@ -15,31 +14,34 @@ class DicaController {
             }
 
             const { data, error } = await supabase
-                .from('Dicas')
+                .from('dicas')
                 .insert([
                     {
-                        nomeCriador: dica.nomeCriador,
+                        codigo: dica.codigo || null,
+                        nomecriador: dica.nomeCriador,
                         conteudo: dica.conteudo,
                         tema: dica.tema,
-                        categoria: dica.categoria
+                        categoria: dica.categoria,
+                        Isverificada: dica.isAprovado,
+                        AprovadoPor: dica.aprovadoPor
                     },
                 ])
                 .select();
 
             if (error) throw error;
-            console.log(data)
+
             return res.status(201).json({ message: 'Dica criada com sucesso', data: data });
         } catch (e) {
+            console.log(e);
             handleError(res, e.message)
         }
     }
 
-    // Read all
-    async index(req, res) {
+    async getAll(req, res) {
         try {
             const { data: dicas, error } = await supabase
-                .from('Dicas')
-                .select('*');
+                .from('dicas')
+                .select();
 
             if (error) throw error;
 
@@ -50,11 +52,10 @@ class DicaController {
     }
 
 
-    // Read one by code
-    async show(req, res) {
+    async getByCode(req, res) {
         try {
             const { data: dica, error } = await supabase
-                .from('Dicas')
+                .from('dicas')
                 .select()
                 .eq('codigo', req.params.codigo)
                 .single();
@@ -81,12 +82,14 @@ class DicaController {
             }
 
             const { data: updatedDica, error: updateError } = await supabase
-                .from('Dicas')
+                .from('dicas')
                 .update([{
-                    nomeCriador: newDica.nomeCriador,
+                    nomecriador: newDica.nomeCriador,
                     conteudo: newDica.conteudo,
                     tema: newDica.tema,
-                    categoria: newDica.categoria
+                    categoria: newDica.categoria,
+                    Isverificada: newDica.isAprovado,
+                    AprovadoPor: newDica.aprovadoPor
                 }])
                 .eq('codigo', req.params.codigo)
                 .select();
@@ -106,9 +109,9 @@ class DicaController {
 
     async delete(req, res) {
         try {
-            console.log(req.params.codigo)
+
             const { data, error: deleteError } = await supabase
-                .from('Dicas')
+                .from('dicas')
                 .delete()
                 .eq('codigo', req.params.codigo)
                 .select();

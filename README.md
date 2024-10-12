@@ -6,7 +6,6 @@ Esta é uma API RESTful desenvolvida em Node.js utilizando o framework Express p
 
 - **Node.js**: Plataforma de desenvolvimento back-end.
 - **Express**: Framework web para criar a API RESTful.
-- **Sequelize** ORM para interação com o banco de dados SQL.
 - **PostgreSQL**: Banco de dados relacional.
 - **JWT (JsonWebToken)**: Autenticação e segurança de rotas.
 - **Jest**: Framework de testes unitários e de integração.
@@ -39,7 +38,6 @@ Antes de iniciar, certifique-se de ter o seguinte instalado:
 
 - Node.js (v14 ou superior)
 - npm ou yarn
-- MySQL
 
 ## Instalação
 
@@ -84,7 +82,7 @@ Rotas similares para dicas, ingredientes e temas, conforme a estrutura do projet
 
 ## Teste
 ```bash
-npm teste
+npm test
 ```
 
 ## Documentação da API
