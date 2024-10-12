@@ -23,7 +23,6 @@ api-app/
 │   ├── /models            # Definição dos modelos de dados (ORM)
 │   ├── /routes            # Definição das rotas da API
 │   ├── /middlewares       # Middlewares para validações e autenticação
-│   ├── /services          # Regras de negócios da aplicação
 │   ├── /utils             # Funções utilitárias e helpers
 │   ├── /tests             # Testes unitários e de integração
 │   └── app.js             # Arquivo principal da aplicação
