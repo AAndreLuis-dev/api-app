@@ -1,12 +1,14 @@
 class Receita {
-    constructor({ codigo, titulo, imgURL, conteudo, categoria, verificado, tema }) {
+    constructor({ codigo, titulo, imgURL, conteudo, categoria, verificado, tema, autor, verificadoPor }) {
         this.codigo = codigo || null;
         this.titulo = titulo;
         this.imgURL = imgURL;
         this.conteudo = conteudo;
         this.categoria = categoria;
         this.verificado = verificado || false;
-        this.tema = tema || null; 
+        this.autor = autor;
+        this.tema = tema || null;
+        this.verificadoPor = verificadoPor || null;
     }
 
     validate() {
