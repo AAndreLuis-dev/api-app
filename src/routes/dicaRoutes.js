@@ -5,11 +5,15 @@ import dicaController from '../controllers/dicaController.js';
 
 const router = new Router();
 
-router.get('/dicas', dicaController.index);
-router.post('/dicas', dicaController.store);
+router.get('/dicas', dicaController.getAll);
+router.post('/dicas', dicaController.create);
 router.put('/dicas/:codigo', dicaController.update);
-router.get('/dicas/:codigo', dicaController.show);
+router.get('/dicas/:codigo', dicaController.getByCode);
 router.delete('/dicas/:codigo', dicaController.delete);
+router.patch('/dicas/:codigo/verificar', dicaController.verify);
+router.get('/:tema/dicas', dicaController.getAllByTheme);
+router.get('/:tema/dicas/verificadas', dicaController.getAllVerifiedByTheme);
+router.get('/:tema/dicas/nao-verificadas', dicaController.getAllNotVerifiedByTheme);
 
 export default router;
 
