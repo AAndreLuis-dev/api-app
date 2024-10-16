@@ -1,5 +1,4 @@
-import Tema from '../models/Tema.js';
-import { supabase } from '../supabase/client.js';
+import supabase from '../supabase/supabaseClient.js';
 
 class TemaController {
 

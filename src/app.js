@@ -5,6 +5,8 @@ import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
+import temaRoutes from './routes/temaRoutes.js';
+
 /* import ingredientesRoutes from './routes/ingredienteRoutes.js' */
 
 const whiteList = ['http://localhost:3000'];
@@ -58,6 +60,7 @@ class App {
     routes() {
         this.app.use('/api', userRoutes);
         this.app.use('/api', dicasRoutes);
+        this.app.use('/api', temaRoutes);
         // this.app.use('/api', ingredientesRoutes);
     }
 
