@@ -3,3 +3,5 @@ class Tema {
         this.tema = tema;
     }
 }
+
+export default Tema;
