@@ -6,6 +6,7 @@ import swaggerUi from 'swagger-ui-express';
 import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
 import temaRoutes from './routes/temaRoutes.js';
+import receitaRoutes from './routes/receitaRoutes.js';
 
 /* import ingredientesRoutes from './routes/ingredienteRoutes.js' */
 
@@ -61,6 +62,7 @@ class App {
         this.app.use('/api', userRoutes);
         this.app.use('/api', dicasRoutes);
         this.app.use('/api', temaRoutes);
+        this.app.use('/api', receitaRoutes);
         // this.app.use('/api', ingredientesRoutes);
     }
 
