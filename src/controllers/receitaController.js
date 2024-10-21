@@ -5,17 +5,26 @@ import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
 class ReceitaController {
 
     async create(req, res) {
+        let uploadedImagePath = null;
         try {
             const receita = new Receita(req.body);
             const { valid, errors } = receita.validate();
 
             if (!valid) return handleError(res, errors, 400, 'Receita Inválida');
 
+            let imgURL = null;
+
+            if (req.file) {
+                const uploadResult = await uploadImage(req.file);
+                imgURL = uploadResult.url;
+                uploadedImagePath = uploadResult.path;
+            }
+
             const { data, error } = await supabase
                 .from('receitas')
                 .insert([{
                     titulo: receita.titulo,
-                    imgurl: receita.imgURL,
+                    imgurl: imgURL || receita.imgURL,
                     conteudo: receita.conteudo,
                     categoria: receita.categoria,
                     verificado: receita.verificado || false,
@@ -24,10 +33,22 @@ class ReceitaController {
                     VerificadaPor: receita.verificadoPor
                 }]).select();
 
-            if (error) return handleError(res, error.message, 500, error.details);
+            if (error) {
+                if (uploadedImagePath) {
+                    await supabase.storage
+                        .from('Teste')  // Supabase Bucket / Storage name
+                        .remove([uploadedImagePath]);
+                }
+                return handleError(res, error.message, 500, error.details);
+            }
 
             return res.status(201).json({ message: 'Receita criada com sucesso', data: data[0] });
         } catch (e) {
+            if (uploadedImagePath) {
+                await supabase.storage
+                    .from('Teste')  // Supabase Bucket / Storage name
+                    .remove([uploadedImagePath]);
+            }
             return handleError(res, e.message);
         }
     }
@@ -71,11 +92,29 @@ class ReceitaController {
                 return handleError(res, errors, 400, 'Essa receita não é válida');
             }
 
+            let imgURL = null;
+
+            if (req.file) {
+                const { data, error } = await supabase.storage
+                    .from('receitas-images')
+                    .upload(`${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+                        contentType: req.file.mimetype,
+                    });
+
+                if (error) return handleError(res, error.message, 500, 'Error uploading image');
+
+                const { data: publicURL } = supabase.storage
+                    .from('receitas-images')
+                    .getPublicUrl(data.path);
+
+                imgURL = publicURL.publicUrl;
+            }
+
             const { data: updatedReceita, error: updateError } = await supabase
                 .from('receitas')
                 .update({
                     titulo: newReceita.titulo,
-                    imgurl: newReceita.imgURL,
+                    imgurl: imgURL || newReceita.imgURL,
                     conteudo: newReceita.conteudo,
                     categoria: newReceita.categoria,
                     verificado: newReceita.verificado,
@@ -224,6 +263,22 @@ class ReceitaController {
             return handleError(res, e.message);
         }
     }
+}
+
+async function uploadImage(file) {
+    const { data, error } = await supabase.storage
+        .from('Teste')  // Supabase Bucket / Storage name
+        .upload(`${Date.now()}-${file.originalname}`, file.buffer, {
+            contentType: file.mimetype,
+        });
+
+    if (error) throw new Error('Error uploading image');
+
+    const { data: publicURL } = supabase.storage
+        .from('Teste') // Supabase Bucket / Storage name
+        .getPublicUrl(data.path);
+
+    return { path: data.path, url: publicURL.publicUrl };
 }
 
 function handleError(res, detail = 'An error has occurred.', status = 500, message = 'Internal Server Error') {

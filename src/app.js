@@ -10,7 +10,7 @@ import receitaRoutes from './routes/receitaRoutes.js';
 
 /* import ingredientesRoutes from './routes/ingredienteRoutes.js' */
 
-const whiteList = ['http://localhost:3000'];
+const whiteList = ['http://localhost:3000', 'http://127.0.0.1:5500'];
 
 
 const corsOptions = {
@@ -53,8 +53,8 @@ class App {
     middlewares() {
         this.app.use(cors(corsOptions));
         this.app.use(helmet());
-        this.app.use(express.urlencoded({ extended: true }));
-        this.app.use(express.json());
+        this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+        this.app.use(express.json({ limit: '50mb' }));
         this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
     }
 
