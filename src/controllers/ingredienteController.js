@@ -1,4 +1,4 @@
-/* import Ingrediente from '../models/Ingrediente.js';
+import Ingrediente from '../models/Ingrediente.js';
 import { supabase } from '../supabase/client.js';
 
 class IngredienteController {
@@ -117,4 +117,4 @@ function handleError(res, detail = 'An error has occurred.', status = 500, messa
     }
 }
 
-export default new IngredienteController(); */
+export default new IngredienteController(); 
