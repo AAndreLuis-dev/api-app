@@ -1,3 +1,5 @@
+import { TEMAS_VALIDOS } from "../utils/temas_validos.js";
+
 class Receita {
     constructor({ codigo, titulo, imgURL, conteudo, categoria, verificado, tema, autor, verificadoPor }) {
         this.codigo = codigo || null;
@@ -25,6 +27,10 @@ class Receita {
         if (typeof this.categoria !== 'string' || this.categoria.length < 3 || this.categoria.length > 100) {
             errors.push('Categoria deve ter entre 3 e 100 caracteres.');
         }
+
+         if (!this.tema || !TEMAS_VALIDOS.includes(this.tema)) {
+            errors.push(`O tema ${this.tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`);
+         }
 
         if (typeof this.verificado !== 'boolean') {
             errors.push('Verificado deve ser um valor booleano.');

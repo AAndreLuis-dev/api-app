@@ -57,7 +57,8 @@ class ReceitaController {
         try {
             const { data: receitas, error } = await supabase
                 .from('receitas')
-                .select();
+                .select()
+                .order('codigo', { ascending: false });
 
             if (error) return handleError(res, error.message, 500, error.details);
 
@@ -71,13 +72,21 @@ class ReceitaController {
         try {
             const { data: receita, error } = await supabase
                 .from('receitas')
-                .select()
+                .select(`
+                    *,
+                    ingredientes (
+                        ingrediente_id,
+                        nomeingrediente,
+                        quantidade,
+                        medida
+                    )
+                    `
+                )
                 .eq('codigo', req.params.codigo)
                 .single();
 
             if (error || !receita) return handleError(res, `A receita com o código ${req.params.codigo} não foi encontrada.`, 404, 'Receita não encontrada');
-
-            return res.json(receita);
+            return res.json({ data: receita });
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -96,7 +105,7 @@ class ReceitaController {
 
             if (req.file) {
                 const { data, error } = await supabase.storage
-                    .from('receitas-images')
+                    .from('Teste')
                     .upload(`${Date.now()}-${req.file.originalname}`, req.file.buffer, {
                         contentType: req.file.mimetype,
                     });
@@ -104,7 +113,7 @@ class ReceitaController {
                 if (error) return handleError(res, error.message, 500, 'Error uploading image');
 
                 const { data: publicURL } = supabase.storage
-                    .from('receitas-images')
+                    .from('Teste')
                     .getPublicUrl(data.path);
 
                 imgURL = publicURL.publicUrl;
@@ -210,6 +219,7 @@ class ReceitaController {
             const { data: receitas, error } = await supabase
                 .from('receitas')
                 .select()
+                .order('codigo', { ascending: false })
                 .eq('verificado', true)
                 .eq('tema', tema);
 
@@ -232,6 +242,7 @@ class ReceitaController {
             const { data: receitas, error } = await supabase
                 .from('receitas')
                 .select()
+                .order('codigo', { ascending: false })
                 .eq('verificado', false)
                 .eq('tema', tema);
 
@@ -254,6 +265,7 @@ class ReceitaController {
             const { data: receitas, error } = await supabase
                 .from('receitas')
                 .select()
+                .order('codigo', { ascending: false })
                 .eq('tema', tema);
 
             if (error) return handleError(res, error.message, 500, error.details);
