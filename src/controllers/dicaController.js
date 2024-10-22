@@ -36,7 +36,8 @@ class DicaController {
         try {
             const { data: dicas, error } = await supabase
                 .from('dicas')
-                .select();
+                .select()
+                .order('codigo', { ascending: false });
 
             if (error) return handleError(res, error.message, 500, error.details);
 
@@ -171,6 +172,7 @@ class DicaController {
             const { data: dicas, error } = await supabase
                 .from('dicas')
                 .select()
+                .order('codigo', { ascending: false })
                 .eq('Isverificada', true)
                 .eq('tema', tema);
 
@@ -194,6 +196,7 @@ class DicaController {
             const { data: dicas, error } = await supabase
                 .from('dicas')
                 .select()
+                .order('codigo', { ascending: false })
                 .eq('Isverificada', false)
                 .eq('tema', tema);
 
@@ -217,6 +220,7 @@ class DicaController {
             const { data: dicas, error } = await supabase
                 .from('dicas')
                 .select()
+                .order('codigo', { ascending: false })
                 .eq('tema', tema);
 
             if (error) return handleError(res, error.message, 500, error.details);
