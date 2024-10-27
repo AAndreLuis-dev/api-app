@@ -1,33 +1,57 @@
 import User from '../models/User.js';
 import { supabase } from '../supabase/client.js';
+import { v4 as uuidv4 } from 'uuid';
 
 class UserController {
     async store(req, res) {
+        let uploadedImagePath = null;
         try {
             const user = new User(req.body);
-
             const { valid, errors } = user.validate();
-            if (!valid) {
-                return res.status(400).json({ errors });
+
+            if (!valid) return res.status(400).json({ errors });
+
+            let fotoUsuarioURL = null;
+
+            if (req.file) {
+                const uploadResult = await uploadImage(req.file);
+                console.log(uploadResult.url);
+                fotoUsuarioURL = uploadResult.url;
+                uploadedImagePath = uploadResult.path;
             }
 
-            const savedUser = await user.save();
+            const { data, error } = await supabase
+                .from('usuarios')
+                .insert([{
+                    email: user.email,
+                    senha: user.senha,
+                    tokens: user.tokens,
+                    nome: user.nome,
+                    telefone: user.telefone,
+                    niveldeconcientizacao: user.niveldeconcientizacao,
+                    ismonitor: user.ismonitor,
+                    fotoUsuario: fotoUsuarioURL,
+                    endereco: user.endereco
+                }]);
 
-            console.log('Usuário salvo:', savedUser);
-
-            if (!savedUser || (Array.isArray(savedUser) && savedUser.length === 0) || !savedUser[0]) {
-                return res.status(400).json({
-                    errors: ['Falha ao salvar o usuário no banco de dados.'],
-                });
+            if (error) {
+                if (uploadedImagePath) {
+                    await supabase.storage
+                        .from('fotoPerfil')
+                        .remove([uploadedImagePath]);
+                }
+                return res.status(500).json({ errors: [error.message] });
             }
 
-            const { email, nome, telefone, nivelDeConcientizacao, isMonitor } = Array.isArray(savedUser) ? savedUser[0] : savedUser;
-            return res.json({ email, nome, telefone, nivelDeConcientizacao, isMonitor });
+            return res.status(201).json({ message: 'Usuário criado com sucesso' });
 
         } catch (e) {
-            return res.status(400).json({
-                errors: [e.message],
-            });
+            if (uploadedImagePath) {
+                await supabase.storage
+                    .from('fotoPerfil')
+                    .remove([uploadedImagePath]);
+            }
+            return res.status(400).json({ errors: [e.message] });
         }
     }
 
@@ -35,16 +59,14 @@ class UserController {
         try {
             const { data: users, error } = await supabase
                 .from('usuarios')
-                .select('email, nome, telefone, niveldeconcientizacao, ismonitor');
+                .select('email, nome, telefone, niveldeconcientizacao, ismonitor, fotoUsuario, endereco');
 
             if (error) throw error;
 
             return res.json(users);
 
         } catch (e) {
-            return res.status(400).json({
-                errors: [e.message],
-            });
+            return res.status(400).json({ errors: [e.message] });
         }
     }
 
@@ -52,22 +74,18 @@ class UserController {
         try {
             const { data: user, error } = await supabase
                 .from('usuarios')
-                .select('email, nome, telefone, niveldeconcientizacao, ismonitor')
+                .select('email, nome, telefone, niveldeconcientizacao, ismonitor, fotoUsuario, endereco')
                 .eq('email', req.params.email)
                 .single();
 
             if (error || !user) {
-                return res.status(404).json({
-                    errors: ['Usuário não encontrado'],
-                });
+                return res.status(404).json({ errors: ['Usuário não encontrado'] });
             }
 
             return res.json(user);
 
         } catch (e) {
-            return res.status(400).json({
-                errors: [e.message],
-            });
+            return res.status(400).json({ errors: [e.message] });
         }
     }
 
@@ -80,9 +98,7 @@ class UserController {
                 .single();
 
             if (fetchError || !user) {
-                return res.status(400).json({
-                    errors: ['Usuário não encontrado'],
-                });
+                return res.status(400).json({ errors: ['Usuário não encontrado'] });
             }
 
             const { error: updateError } = await supabase
@@ -95,9 +111,7 @@ class UserController {
             return res.json({ message: 'Usuário atualizado com sucesso' });
 
         } catch (e) {
-            return res.status(400).json({
-                errors: [e.message],
-            });
+            return res.status(400).json({ errors: [e.message] });
         }
     }
 
@@ -110,9 +124,7 @@ class UserController {
                 .single();
 
             if (fetchError || !user) {
-                return res.status(400).json({
-                    errors: ['Usuário não encontrado'],
-                });
+                return res.status(400).json({ errors: ['Usuário não encontrado'] });
             }
 
             const { error: deleteError } = await supabase
@@ -125,10 +137,29 @@ class UserController {
             return res.json({ message: 'Usuário deletado com sucesso' });
 
         } catch (e) {
-            return res.status(400).json({
-                errors: [e.message],
-            });
+            return res.status(400).json({ errors: [e.message] });
         }
+    }
+}
+
+async function uploadImage(file) {
+    try {
+        const uniqueFileName = `${uuidv4()}-${file.originalname}`;
+        const { data, error } = await supabase.storage
+            .from('fotoPerfil')
+            .upload(uniqueFileName, file.buffer, {
+                contentType: file.mimetype,
+            });
+
+        if (error) throw new Error(`Erro ao fazer upload da imagem: ${error.message}`);
+
+        const { publicURL } = supabase.storage.from('fotoPerfil').getPublicUrl(uniqueFileName);
+
+        return { url: publicURL, path: uniqueFileName };
+
+    } catch (e) {
+        console.error("Erro detalhado ao tentar fazer upload da imagem:", e);
+        throw new Error(`Erro ao fazer upload da imagem: ${e.message}`);
     }
 }
 

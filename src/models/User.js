@@ -2,7 +2,7 @@ import { supabase } from '../supabase/client.js'; // Importa o cliente Supabase 
 import argon2 from 'argon2';
 
 class User {
-    constructor({ email, tokens, senha, nome, telefone, niveldeconcientizacao, ismonitor }) {
+    constructor({ email, tokens, senha, nome, telefone, niveldeconcientizacao, ismonitor, fotoUsuario, endereco }) {
         this.email = email;
         this.tokens = tokens;
         this.senha = senha;
@@ -10,8 +10,9 @@ class User {
         this.telefone = telefone;
         this.niveldeconcientizacao = niveldeconcientizacao;
         this.ismonitor = ismonitor;
+        this.fotoUsuario = fotoUsuario;
+        this.endereco = endereco;
     }
-
 
     validate() {
         const errors = [];
@@ -25,8 +26,8 @@ class User {
             errors.push('Email inválido.');
         }
 
-        if (typeof this.tokens !== 'string'){
-            errors.push('token invalido')
+        if (typeof this.tokens !== 'string') {
+            errors.push('Token inválido.');
         }
 
         const telefoneRegex = /^\+?[1-9]\d{1,14}$/;
@@ -35,10 +36,10 @@ class User {
         }
 
         if (!this.senha || this.senha.length < 6 || this.senha.length > 255) {
-            errors.push('A senha precisa ter entre 6 e 21 caracteres.');
+            errors.push('A senha precisa ter entre 6 e 255 caracteres.'); // Corrigido para 255
         }
 
-        if (typeof this.niveldeconcientizacao !== 'number' || this.niveldeconcientizacao < 0 || this.niveldeconcientizacao > 5) {
+        if (this.niveldeconcientizacao < 0 || this.niveldeconcientizacao > 5) {
             errors.push('Nível de conscientização deve ser um número entre 0 e 5.');
         }
 
@@ -48,7 +49,6 @@ class User {
 
         return { valid: true };
     }
-
 
     async save() {
         const password_hash = await argon2.hash(this.senha);
@@ -63,7 +63,9 @@ class User {
                     nome: this.nome,
                     telefone: this.telefone,
                     niveldeconcientizacao: this.niveldeconcientizacao,
-                    ismonitor: this.ismonitor
+                    ismonitor: this.ismonitor,
+                    fotoUsuario: this.fotoUsuario, // Novo campo
+                    endereco: this.endereco // Novo campo
                 },
             ])
             .select();
@@ -77,8 +79,8 @@ class User {
 
     async passwordIsValid(password) {
         const { data: user, error } = await supabase
-            .from('users')
-            .select('password_hash')
+            .from('usuarios') // Mudança para 'usuarios' em vez de 'users'
+            .select('senha')
             .eq('email', this.email)
             .single();
 
@@ -86,7 +88,7 @@ class User {
             throw new Error('Usuário não encontrado ou erro ao buscar.');
         }
 
-        return argon2.verify(user.password_hash, password);
+        return argon2.verify(user.senha, password); // Mudança para 'senha'
     }
 }
 

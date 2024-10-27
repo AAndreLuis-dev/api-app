@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import userController from '../controllers/userController.js';
+import upload from "../middlewares/uploadMiddleware.js";
 
 const router = new Router();
 
@@ -37,7 +38,7 @@ const router = new Router();
  *       400:
  *         description: Erro na criação do usuário
  */
-router.post('/usuario', userController.store);
+router.post('/usuario', upload.single('fotoUsuario'), userController.store);
 
 /**
  * @swagger
@@ -109,7 +110,7 @@ router.get('/usuario/:email', userController.show);
  *       400:
  *         description: Erro ao atualizar o usuário
  */
-router.put('/usuario/:email', userController.update);
+router.put('/usuario/:email', upload.single('fotoUsuario'), userController.update);
 
 /**
  * @swagger
