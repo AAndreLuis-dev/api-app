@@ -153,9 +153,15 @@ async function uploadImage(file) {
 
         if (error) throw new Error(`Erro ao fazer upload da imagem: ${error.message}`);
 
-        const { publicURL } = supabase.storage.from('fotoPerfil').getPublicUrl(uniqueFileName);
+        console.log("Upload realizado com sucesso:", data);
 
-        return { url: publicURL, path: uniqueFileName };
+        const { data: publicURL } = supabase.storage
+            .from('fotoPerfil') // Supabase Bucket / Storage name
+            .getPublicUrl(data.path);
+
+        console.log("URL pública obtida:", publicURL);
+
+        return { url: publicURL.publicUrl, path: data.path };
 
     } catch (e) {
         console.error("Erro detalhado ao tentar fazer upload da imagem:", e);
