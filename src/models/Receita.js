@@ -4,11 +4,8 @@ class Receita {
     constructor(receita) {
         this.titulo = receita.titulo;
         this.conteudo = receita.conteudo;
-        this.verificado = receita.verificado || false;
-        this.autor = receita.autor;
-        this.VerificadoPor = receita.VerificadoPor;
-        this.subTema = receita.subTema;
-        this.tema = receita.tema;
+        this.isVerify = receita.isVerify || false;
+        this.nomeusu = receita.nomeusu;
     }
 
     validate() {
@@ -22,22 +19,12 @@ class Receita {
             errors.push("Conteúdo deve ter entre 3 e 2000 caracteres.");
         }
 
-        if (!this.autor) {
-            errors.push("Autor é obrigatório.");
+        if (!this.nomeusu) {
+            errors.push("Nome do usuário é obrigatório.");
         }
 
-        if (!this.tema) {
-            errors.push("Tema é obrigatório.");
-        } else if (!TEMAS_VALIDOS.includes(this.tema)) {
-            errors.push(`Tema inválido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}`);
-        }
-
-        if (!this.subTema) {
-            errors.push("SubTema é obrigatório.");
-        }
-
-        if (this.verificado !== undefined && typeof this.verificado !== 'boolean') {
-            errors.push("Verificado deve ser um valor booleano.");
+        if (this.isVerify !== undefined && typeof this.isVerify !== 'boolean') {
+            errors.push("IsVerify deve ser um valor booleano.");
         }
 
         return {
