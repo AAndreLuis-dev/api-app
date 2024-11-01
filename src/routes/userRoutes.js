@@ -133,4 +133,5 @@ router.put('/usuario/:email', upload.single('fotoUsuario'), userController.updat
  */
 router.delete('/usuario/:email', userController.delete);
 
+
 export default router;
