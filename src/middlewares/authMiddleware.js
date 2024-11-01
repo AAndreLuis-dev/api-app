@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-async function authMiddlewere(req, res, next) {
+async function authMiddleware(req, res, next) {
     const token = req.headers['authorization'].split(' ')[1];
     if(!token) return res.status(401).json({ message: 'Token não fornecido'});
 
@@ -16,4 +16,4 @@ async function authMiddlewere(req, res, next) {
     };
 };
 
-module.exports = authMiddlewere;
+module.exports = authMiddleware;
