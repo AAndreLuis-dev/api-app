@@ -37,11 +37,21 @@ class ReceitaController {
                 throw receitaError;
             }
 
+            const subtemas = new Subtema(req.body.subtemas);
+            const resultSubtemas = await subtemas.validate();
+
+            for (const subtema of resultSubtemas.subtemasExistentes) {
+                const { data, error } = await supabase
+                    .from('correlacaoReceitas')
+                    .insert([{ idReceita: receitaData.Id, subtema: subtema }]);
+                if (error) throw error;
+            }
+
             // Upload das imagens
             if (req.files?.length > 0) {
                 for (const file of req.files) {
                     const fileName = `${receitaData.Id}-${Date.now()}-${file.originalname}`;
-                    
+
                     const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('fotosReceitas')
                         .upload(fileName, file.buffer, {
@@ -83,7 +93,7 @@ class ReceitaController {
             // Buscar todas as receitas
             const { data: receitas, error } = await supabase
                 .from('receitas')
-                .select('*');
+                .select('*, correlacaoReceitas(subtema)');
 
             if (error) throw error;
 
@@ -96,10 +106,10 @@ class ReceitaController {
                         search: `${receita.codigo}-`
                     });
 
-                const imagem = data && data[0] ? 
+                const imagem = data && data[0] ?
                     supabase.storage
                         .from('fotosReceitas')
-                        .getPublicUrl(data[0].name).data.publicUrl 
+                        .getPublicUrl(data[0].name).data.publicUrl
                     : null;
 
                 return {
@@ -140,7 +150,7 @@ class ReceitaController {
                 });
 
             // Gerar URLs públicas
-            const imagens = arquivos ? arquivos.map(arquivo => 
+            const imagens = arquivos ? arquivos.map(arquivo =>
                 supabase.storage
                     .from('fotosReceitas')
                     .getPublicUrl(arquivo.name).data.publicUrl
@@ -192,7 +202,7 @@ class ReceitaController {
             // 3. Se houver novas imagens, remover as antigas
             if (req.files?.length > 0) {
                 console.log('3. Processando novas imagens');
-                
+
                 // Listar imagens antigas
                 const { data: arquivosAntigos } = await supabase.storage
                     .from('fotosReceitas')
@@ -211,7 +221,7 @@ class ReceitaController {
                 const imageUrls = [];
                 for (const file of req.files) {
                     const fileName = `${receita.Id}-${Date.now()}-${file.originalname}`;
-                    
+
                     const { error: uploadError } = await supabase.storage
                         .from('fotosReceitas')
                         .upload(fileName, file.buffer, {
@@ -241,6 +251,26 @@ class ReceitaController {
             if (updateError) throw updateError;
 
             console.log('5. Receita atualizada com sucesso');
+
+            // 5. Gerenciar subtemas
+            const subtemas = new Subtema(req.body.subtemas);
+            const resultSubtemas = await subtemas.validate();
+
+            // 6. Deletar subtemas que não existem mais
+            await supabase
+                .from('correlacaoReceitas')
+                .delete()
+                .eq('idReceita', req.params.codigo)
+                .not('subtema', 'in', `(${resultSubtemas.subtemasExistentes.map(st => `'${st}'`).join(',')})`);
+
+            // 7. Inserir novos subtemas
+            for (const subtema of resultSubtemas.subtemasExistentes) {
+                const { error: insertError } = await supabase
+                    .from('correlacaoReceitas')
+                    .insert([{ idReceita: req.params.codigo, subtema }]);
+
+                if (insertError) throw insertError;
+            }
 
             return res.json({
                 message: 'Receita atualizada com sucesso',
@@ -291,7 +321,15 @@ class ReceitaController {
                 }
             }
 
-            // 4. Deletar a receita
+            // 4. Deletar as associações de subtemas
+            const { error: deleteSubtemaError } = await supabase
+                .from('correlacaoReceitas')
+                .delete()
+                .eq('idReceita', req.params.codigo);
+
+            if (deleteSubtemaError) throw deleteSubtemaError;
+
+            // 5. Deletar a receita
             const { error: deleteError } = await supabase
                 .from('receitas')
                 .delete()
