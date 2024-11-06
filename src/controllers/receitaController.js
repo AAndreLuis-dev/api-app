@@ -1,30 +1,35 @@
 import Receita from '../models/Receita.js';
 import { supabase } from '../supabase/client.js';
-import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
 import multer from 'multer';
 
 class ReceitaController {
-
     async create(req, res) {
         let imageUrls = [];
 
         try {
-            console.log('1. Dados recebidos:', req.body);
-
-            // Validar dados obrigatórios
-            if (!req.body.Titulo || !req.body.Conteudo || !req.body.nomeusu) {
-                throw new Error('Campos obrigatórios: Titulo, Conteudo e nomeusu');
+            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario) {
+                throw new Error('Campos obrigatórios: titulo, conteudo e idUsuario');
             }
 
-            // Criar objeto com os nomes EXATOS das colunas
-            const novaReceita = {
-                "Titulo": req.body.Titulo,      // Exatamente como está no banco
-                "Conteudo": req.body.Conteudo,  // Exatamente como está no banco
-                "IsVerify": false,              // Exatamente como está no banco
-                "nomeusu": req.body.nomeusu     // Exatamente como está no banco
-            };
+            // Primeiro, vamos verificar se o email existe na tabela de usuários
+            const { data: usuario, error: userError } = await supabase
+                .from('usuarios')
+                .select('email')
+                .eq('email', req.body.idUsuario)
+                .single();
 
-            console.log('2. Dados para inserção:', novaReceita);
+            if (userError || !usuario) {
+                throw new Error('Usuário não encontrado');
+            }
+
+            const novaReceita = {
+                titulo: req.body.titulo,
+                conteudo: req.body.conteudo,
+                isVerify: false,
+                idUsuario: req.body.idUsuario,
+                dataCriacao: new Date().toISOString(),
+                ultimaAlteracao: new Date().toISOString()
+            };
 
             const { data: receitaData, error: receitaError } = await supabase
                 .from('receitas')
@@ -32,15 +37,11 @@ class ReceitaController {
                 .select()
                 .single();
 
-            if (receitaError) {
-                console.log('Erro ao criar receita:', receitaError);
-                throw receitaError;
-            }
+            if (receitaError) throw receitaError;
 
-            // Upload das imagens
             if (req.files?.length > 0) {
                 for (const file of req.files) {
-                    const fileName = `${receitaData.Id}-${Date.now()}-${file.originalname}`;
+                    const fileName = `${receitaData.id}-${Date.now()}-${file.originalname}`;
                     
                     const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('fotosReceitas')
@@ -54,20 +55,26 @@ class ReceitaController {
                         .from('fotosReceitas')
                         .getPublicUrl(fileName);
 
+                    const { error: fotoError } = await supabase
+                        .from('fotosReceitas')
+                        .insert({
+                            idFoto: Date.now(),
+                            id: receitaData.id,
+                            url: publicUrl,
+                            createdAt: new Date().toISOString()
+                        });
+
+                    if (fotoError) throw fotoError;
                     imageUrls.push(publicUrl);
                 }
             }
 
             return res.status(201).json({
                 message: 'Receita criada com sucesso',
-                data: {
-                    ...receitaData,
-                    imagens: imageUrls
-                }
+                data: { ...receitaData, fotos: imageUrls }
             });
 
         } catch (e) {
-            console.log('Erro completo:', e);
             if (imageUrls.length > 0) {
                 for (const url of imageUrls) {
                     const fileName = url.split('/').pop();
@@ -80,365 +87,272 @@ class ReceitaController {
 
     async getAll(req, res) {
         try {
-            // Buscar todas as receitas
-            const { data: receitas, error } = await supabase
+            const { data: receitas, error: receitasError } = await supabase
                 .from('receitas')
-                .select('*');
+                .select('*')
+                .order('dataCriacao', { ascending: false });
 
-            if (error) throw error;
+            if (receitasError) throw receitasError;
 
-            // Buscar primeira imagem de cada receita
-            const receitasComImagens = await Promise.all(receitas.map(async (receita) => {
-                const { data } = await supabase.storage
+            const receitasComFotos = await Promise.all(receitas.map(async (receita) => {
+                const { data: fotos, error: fotosError } = await supabase
                     .from('fotosReceitas')
-                    .list('', {
-                        limit: 1,
-                        search: `${receita.codigo}-`
-                    });
+                    .select('*')
+                    .eq('id', receita.id);
 
-                const imagem = data && data[0] ? 
-                    supabase.storage
-                        .from('fotosReceitas')
-                        .getPublicUrl(data[0].name).data.publicUrl 
-                    : null;
+                if (fotosError) throw fotosError;
 
                 return {
                     ...receita,
-                    imagem
+                    fotos: fotos || []
                 };
             }));
 
-            return res.json(receitasComImagens);
+            return res.json(receitasComFotos);
         } catch (e) {
             return handleError(res, e.message);
         }
     }
 
-    async getByCode(req, res) {
+    async getById(req, res) {
         try {
-            // Buscar receita usando 'Id' (com I maiúsculo)
-            const { data: receita, error } = await supabase
+            const { data: receita, error: receitaError } = await supabase
                 .from('receitas')
                 .select('*')
-                .eq('Id', req.params.codigo)
+                .eq('id', req.params.id)
                 .single();
 
-            if (error) {
-                console.log('Erro ao buscar receita:', error);
-                throw error;
-            }
+            if (receitaError) throw receitaError;
+            if (!receita) return handleError(res, 'Receita não encontrada', 404);
 
-            if (!receita) {
-                return handleError(res, 'Receita não encontrada', 404);
-            }
-
-            // Buscar imagens da receita
-            const { data: arquivos } = await supabase.storage
+            const { data: fotos, error: fotosError } = await supabase
                 .from('fotosReceitas')
-                .list('', {
-                    search: `${receita.Id}-`
-                });
+                .select('*')
+                .eq('id', receita.id);
 
-            // Gerar URLs públicas
-            const imagens = arquivos ? arquivos.map(arquivo => 
-                supabase.storage
-                    .from('fotosReceitas')
-                    .getPublicUrl(arquivo.name).data.publicUrl
-            ) : [];
+            if (fotosError) throw fotosError;
 
             return res.json({
                 ...receita,
-                imagens
+                fotos: fotos || []
             });
         } catch (e) {
-            console.log('Erro:', e);
             return handleError(res, e.message);
         }
     }
 
     async update(req, res) {
+        let imageUrls = [];
         try {
-            console.log('1. Iniciando atualização da receita:', req.params.codigo);
-
-            // 1. Verificar se a receita existe
+            console.log('1. Body recebido:', req.body);
+            console.log('2. Files recebidos:', req.files?.length);
+    
+            // Validação dos dados recebidos
+            if (!req.body.titulo && !req.body.conteudo && !req.files?.length) {
+                return handleError(res, 'Nenhum dado para atualizar foi fornecido', 400);
+            }
+    
             const { data: receita, error: findError } = await supabase
                 .from('receitas')
                 .select('*')
-                .eq('Id', req.params.codigo)  // Usando 'Id' com I maiúsculo
+                .eq('id', req.params.id)
                 .single();
-
-            if (findError) {
-                console.log('Erro ao buscar receita:', findError);
-                throw findError;
+    
+            if (findError || !receita) {
+                return handleError(res, 'Receita não encontrada', 404);
             }
-
-            if (!receita) {
-                console.log('Receita não encontrada:', req.params.codigo);
-                return res.status(404).json({
-                    message: 'Receita não encontrada',
-                    detail: `Não existe receita com Id ${req.params.codigo}`
-                });
-            }
-
-            // 2. Preparar dados para atualização
-            const dadosAtualizados = {
-                "Titulo": req.body.Titulo,      // Exatamente como está no banco
-                "Conteudo": req.body.Conteudo,  // Exatamente como está no banco
-                "nomeusu": req.body.nomeusu     // Exatamente como está no banco
-            };
-
-            console.log('2. Dados para atualização:', dadosAtualizados);
-
-            // 3. Se houver novas imagens, remover as antigas
+    
+            // Se existem novas fotos
             if (req.files?.length > 0) {
-                console.log('3. Processando novas imagens');
-                
-                // Listar imagens antigas
-                const { data: arquivosAntigos } = await supabase.storage
+                // Deletar fotos antigas
+                const { data: fotosAntigas } = await supabase
                     .from('fotosReceitas')
-                    .list('', {
-                        search: `${receita.Id}-`
-                    });
-
-                // Remover imagens antigas
-                if (arquivosAntigos?.length > 0) {
-                    await supabase.storage
+                    .select('*')
+                    .eq('id', req.params.id);
+    
+                if (fotosAntigas?.length > 0) {
+                    for (const foto of fotosAntigas) {
+                        const fileName = foto.url.split('/fotosReceitas/').pop();
+                        await supabase.storage
+                            .from('fotosReceitas')
+                            .remove([fileName]);
+                    }
+    
+                    await supabase
                         .from('fotosReceitas')
-                        .remove(arquivosAntigos.map(a => a.name));
+                        .delete()
+                        .eq('id', req.params.id);
                 }
-
-                // Upload das novas imagens
-                const imageUrls = [];
+    
+                // Upload novas fotos
                 for (const file of req.files) {
-                    const fileName = `${receita.Id}-${Date.now()}-${file.originalname}`;
+                    const fileName = `${receita.id}-${Date.now()}-${file.originalname}`;
                     
-                    const { error: uploadError } = await supabase.storage
+                    const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('fotosReceitas')
                         .upload(fileName, file.buffer, {
                             contentType: file.mimetype
                         });
-
+    
                     if (uploadError) throw uploadError;
-
+    
                     const { data: { publicUrl } } = supabase.storage
                         .from('fotosReceitas')
                         .getPublicUrl(fileName);
-
+    
+                    const { error: fotoError } = await supabase
+                        .from('fotosReceitas')
+                        .insert({
+                            idFoto: Date.now(),
+                            id: receita.id,
+                            url: publicUrl,
+                            createdAt: new Date().toISOString()
+                        });
+    
+                    if (fotoError) throw fotoError;
                     imageUrls.push(publicUrl);
                 }
-
-                console.log('4. Novas imagens processadas:', imageUrls);
             }
-
-            // 4. Atualizar dados da receita
-            const { data: updatedReceita, error: updateError } = await supabase
+    
+            // Atualiza dados da receita
+            const dadosAtualizados = {
+                titulo: req.body.titulo || receita.titulo,
+                conteudo: req.body.conteudo || receita.conteudo,
+                isVerify: receita.isVerify,
+                idUsuario: receita.idUsuario,
+                verifyBy: receita.verifyBy,
+                dataCriacao: receita.dataCriacao,
+                ultimaAlteracao: new Date().toISOString()
+            };
+    
+            const { data: receitaAtualizada, error: updateError } = await supabase
                 .from('receitas')
                 .update(dadosAtualizados)
-                .eq('Id', req.params.codigo)  // Usando 'Id' com I maiúsculo
+                .eq('id', req.params.id)
                 .select()
                 .single();
-
+    
             if (updateError) throw updateError;
-
-            console.log('5. Receita atualizada com sucesso');
-
+    
             return res.json({
                 message: 'Receita atualizada com sucesso',
-                data: updatedReceita
+                data: { ...receitaAtualizada, fotos: imageUrls }
             });
-
+    
         } catch (e) {
-            console.log('Erro completo:', e);
+            console.error('Erro completo:', e);
+            if (imageUrls.length > 0) {
+                for (const url of imageUrls) {
+                    const fileName = url.split('/fotosReceitas/').pop();
+                    await supabase.storage.from('fotosReceitas').remove([fileName]);
+                }
+            }
             return handleError(res, e.message);
         }
     }
 
+
     async delete(req, res) {
         try {
-            // 1. Verificar se a receita existe
             const { data: receita, error: findError } = await supabase
                 .from('receitas')
                 .select('*')
-                .eq('Id', req.params.codigo)
+                .eq('id', req.params.id)
                 .single();
-
+    
             if (findError || !receita) {
-                console.log('Receita não encontrada:', req.params.codigo);
                 return handleError(res, 'Receita não encontrada', 404);
             }
-
-            // 2. Listar e remover todas as imagens do bucket
-            const { data: arquivos, error: listError } = await supabase.storage
+    
+            // Primeiro, buscar todas as fotos da receita
+            const { data: fotos, error: fotosError } = await supabase
                 .from('fotosReceitas')
-                .list('', {
-                    search: `${receita.Id}-`
-                });
-
-            if (listError) {
-                console.log('Erro ao listar arquivos:', listError);
-                throw listError;
-            }
-
-            // 3. Remover imagens se existirem
-            if (arquivos?.length > 0) {
-                const { error: deleteStorageError } = await supabase.storage
-                    .from('fotosReceitas')
-                    .remove(arquivos.map(a => a.name));
-
-                if (deleteStorageError) {
-                    console.log('Erro ao deletar arquivos:', deleteStorageError);
-                    throw deleteStorageError;
+                .select('*')  // Alterado de 'url' para '*' para pegar todos os dados
+                .eq('id', req.params.id);
+    
+            if (fotosError) throw fotosError;
+    
+            // Se existem fotos, deletar do bucket e da tabela
+            if (fotos?.length > 0) {
+                for (const foto of fotos) {
+                    // Extrair o nome do arquivo da URL
+                    const fileName = foto.url.split('/fotosReceitas/').pop();
+                    
+                    console.log('Tentando deletar arquivo:', fileName);
+    
+                    const { error: deleteStorageError } = await supabase.storage
+                        .from('fotosReceitas')
+                        .remove([fileName]);
+    
+                    if (deleteStorageError) {
+                        console.error('Erro ao deletar arquivo:', deleteStorageError);
+                        throw deleteStorageError;
+                    }
                 }
+    
+                // Deletar registros da tabela fotosReceitas
+                const { error: deleteFotosError } = await supabase
+                    .from('fotosReceitas')
+                    .delete()
+                    .eq('id', req.params.id);
+    
+                if (deleteFotosError) throw deleteFotosError;
             }
-
-            // 4. Deletar a receita
+    
+            // Por fim, deletar a receita
             const { error: deleteError } = await supabase
                 .from('receitas')
                 .delete()
-                .eq('Id', req.params.codigo);
-
+                .eq('id', req.params.id);
+    
             if (deleteError) throw deleteError;
-
+    
             return res.json({
-                message: 'Receita e imagens deletadas com sucesso'
+                message: 'Receita e fotos deletadas com sucesso'
             });
-
+    
         } catch (e) {
-            console.log('Erro ao deletar:', e);
+            console.error('Erro completo:', e);
             return handleError(res, e.message);
         }
     }
 
     async verify(req, res) {
         try {
-            const verificadaPor = req.body.VerificadaPor;
-            const codigo = req.params.codigo;
-
-            if (!verificadaPor) {
-                return handleError(res, `O campo 'VerificadaPor' é obrigatório.`, 400, 'Input inválido');
-            }
-
-            const { data: user, userError } = await supabase
-                .from('usuarios')
-                .select('email, nome, telefone, niveldeconcientizacao, ismonitor')
-                .eq('email', verificadaPor)
-                .maybeSingle();
-
-            if (!user || userError) {
-                return handleError(res, `O usuário com o email ${verificadaPor} não foi encontrado.`, 404, 'Usuário não encontrado');
-            }
-
-            if (!user.ismonitor) {
-                return handleError(res, `O usuário com o email ${verificadaPor} não é um monitor.`, 400, 'Usuário não é monitor');
+            if (!req.body.verifyBy) {
+                return handleError(res, 'Campo verifyBy é obrigatório', 400);
             }
 
             const { data: receita, error } = await supabase
                 .from('receitas')
                 .update({
-                    verificado: true,
-                    VerificadaPor: verificadaPor
+                    isVerify: true,
+                    verifyBy: req.body.verifyBy,
+                    ultimaAlteracao: new Date().toISOString()
                 })
-                .eq('codigo', codigo)
-                .select();
-
-            if (error) return handleError(res, error.message, 500, error.details);
-
-            if (!receita) return handleError(res, `A receita com o código ${codigo} não foi encontrada.`, 404, 'Receita não encontrada');
-
-            return res.status(200).json({ message: `A receita com o código ${codigo} foi verificada com sucesso pelo usuário com o email ${verificadaPor}.` });
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async getAllVerifiedByTheme(req, res) {
-        try {
-            const { tema } = req.params;
-
-            if (!TEMAS_VALIDOS.includes(tema)) {
-                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
-            }
-
-            const { data: receitas, error } = await supabase
-                .from('receitas')
+                .eq('id', req.params.id)
                 .select()
-                .order('codigo', { ascending: false })
-                .eq('verificado', true)
-                .eq('tema', tema);
+                .single();
 
-            if (error) return handleError(res, error.message, 500, error.details);
+            if (error) throw error;
+            if (!receita) return handleError(res, 'Receita não encontrada', 404);
 
-            return res.status(200).json(receitas);
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async getAllNotVerifiedByTheme(req, res) {
-        try {
-            const { tema } = req.params;
-
-            if (!TEMAS_VALIDOS.includes(tema)) {
-                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input invlido');
-            }
-
-            const { data: receitas, error } = await supabase
-                .from('receitas')
-                .select()
-                .order('codigo', { ascending: false })
-                .eq('verificado', false)
-                .eq('tema', tema);
-
-            if (error) return handleError(res, error.message, 500, error.details);
-
-            return res.status(200).json(receitas);
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async getAllByTheme(req, res) {
-        try {
-            const { tema } = req.params;
-
-            if (!TEMAS_VALIDOS.includes(tema)) {
-                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
-            }
-
-            const { data: receitas, error } = await supabase
-                .from('receitas')
-                .select()
-                .order('codigo', { ascending: false })
-                .eq('tema', tema);
-
-            if (error) return handleError(res, error.message, 500, error.details);
-
-            return res.status(200).json(receitas);
+            return res.json({
+                message: 'Receita verificada com sucesso',
+                data: receita
+            });
         } catch (e) {
             return handleError(res, e.message);
         }
     }
 }
 
-async function uploadImage(file) {
-    const { data, error } = await supabase.storage
-        .from('fotosReceitas')
-        .upload(`${Date.now()}-${file.originalname}`, file.buffer, {
-            contentType: file.mimetype,
-        });
-
-    if (error) throw new Error('Error uploading image');
-
-    const { data: publicURL } = supabase.storage
-        .from('fotosReceitas')
-        .getPublicUrl(data.path);
-
-    return { path: data.path, url: publicURL.publicUrl };
-}
-
-function handleError(res, detail = 'An error has occurred.', status = 500, message = 'Internal Server Error') {
+function handleError(res, detail = 'Ocorreu um erro.', status = 500) {
     if (!res.headersSent) {
-        return res.status(status).json({ message, detail });
+        return res.status(status).json({
+            message: 'Erro',
+            detail
+        });
     }
 }
 
