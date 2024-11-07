@@ -2,7 +2,6 @@ import { Router } from 'express';
 import dicaController from '../controllers/dicaController.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 
-const authMiddleware = require('../middlewares/authMiddleware.js');
 
 // import loginRequired from '../middlewares/loginRequired'; futuro
 

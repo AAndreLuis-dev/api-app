@@ -5,7 +5,6 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = new Router();
 
-const authMiddleware = require('../middlewares/authMiddleware.js');
 /**
  * @swagger
  * /api/usuario:

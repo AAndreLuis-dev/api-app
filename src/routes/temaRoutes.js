@@ -3,7 +3,6 @@ import temaController from '../controllers/temaController.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = new Router();
-const authMiddleware = require('../middlewares/authMiddleware.js');
 
 router.get('/temas', temaController.index);
 router.get('/temas/existe/:tema', temaController.checkIfExists);
