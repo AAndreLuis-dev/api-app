@@ -57,6 +57,22 @@ class ReceitaController {
                 if (correlacaoError) throw correlacaoError;
             }
 
+            const temaSubtemaData = resultSubtemas.subtemasExistentes.map(subtema => ({
+                tema: req.body.tema,
+                subtema: subtema
+            }));
+    
+            if (temaSubtemaData.length > 0) {
+                const { error: temaSubtemaError } = await supabase
+                    .from('temaSubtema')
+                    .insert(temaSubtemaData);
+    
+                if (temaSubtemaError) {
+                    console.log('Erro ao inserir dados na tabela temaSubtema:', temaSubtemaError);
+                    throw temaSubtemaError;
+                }
+            }
+
             // Upload das imagens
             if (req.files?.length > 0) {
                 for (const file of req.files) {
