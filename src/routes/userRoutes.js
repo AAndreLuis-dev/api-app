@@ -5,7 +5,7 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = new Router();
 
-// #TODO - Protect all routes
+// #TODO - Protect all necessary routes
 const authMiddleware = require('../middlewares/authMiddleware.js');
 /**
  * @swagger
