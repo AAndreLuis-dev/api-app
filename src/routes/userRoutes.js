@@ -5,7 +5,6 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = new Router();
 
-// #TODO - Protect all necessary routes
 const authMiddleware = require('../middlewares/authMiddleware.js');
 /**
  * @swagger
@@ -97,7 +96,7 @@ router.post('/usuario/login', userController.loginUser);
  *       400:
  *         description: Erro ao buscar usuários
  */
-router.get('/usuario', userController.index);
+router.get('/usuario', authMiddleware, userController.index);
 
 /**
  * @swagger
@@ -118,7 +117,7 @@ router.get('/usuario', userController.index);
  *       404:
  *         description: Usuário não encontrado
  */
-router.get('/usuario/:email', userController.show);
+router.get('/usuario/:email', authMiddleware, userController.show);
 
 /**
  * @swagger
@@ -176,7 +175,7 @@ router.put('/usuario/:email', userUpload.single('fotoUsu'), userController.updat
  *       400:
  *         description: Erro ao deletar o usuário
  */
-router.delete('/usuario/:email', userController.delete);
+router.delete('/usuario/:email', authMiddleware, userController.delete);
 
 
 export default router;
