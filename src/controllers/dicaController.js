@@ -58,7 +58,7 @@ class DicaController {
                 }).select();
 
             if (dicaError) return handleError(res, dicaError.message, 500, dicaError.details);
-            
+
             const { data: correlacaoData, error: correlacaoError } = await supabase
                 .from('correlacaoDicas')
                 .insert({

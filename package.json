@@ -2,7 +2,7 @@
   "name": "api-app",
   "version": "1.0.0",
   "description": "Esta é uma API RESTful desenvolvida em Node.js utilizando o framework Express para gerenciar dados de cinco diferentes aplicativos: moda, culinária, engenharia, estética e veterinária. Esta API permite o cadastro de usuários, gerenciamento de postagens e integração entre os diferentes apps.",
-  "main": "app.js",
+  "main": "src/app.js",
   "directories": {
     "doc": "docs"
   },
