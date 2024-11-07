@@ -179,35 +179,46 @@ class UserController {
     }
     async loginUser(req, res) {
         const { email, senha } = req.body;
-          
+        
         try {
-          const { data: user, error } = await supabase
-            .from('usuarios')
-            .select('*')
-            .eq('email', email)
-            .single();
-          
-            if (error || !user) {
-                return res.status(400).json({ error: 'Usuário não encontrado ou erro na busca' });
-              }
+            console.log("Iniciando login para o email:", email);
     
-              const validPassword = await argon2.verify(user.senha, senha);
-              if (!validPassword) {
+            const { data: user, error } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('email', email)
+                .single();
+    
+            if (error || !user) {
+                console.log("Erro ao buscar usuário ou usuário não encontrado:", error);
+                return res.status(400).json({ error: 'Usuário não encontrado ou erro na busca' });
+            }
+    
+            console.log("Usuário encontrado:", user);
+    
+            const validPassword = await argon2.verify(user.senha, senha);
+            if (!validPassword) {
+                console.log("Senha inválida para o usuário:", email);
                 return res.status(401).json({ error: 'Credenciais inválidas' });
-              }
-          
-              const token = jwt.sign(
+            }
+    
+            console.log("Senha verificada com sucesso. Gerando token...");
+    
+            const token = jwt.sign(
                 { userId: user.id, email: user.email },
                 process.env.JWT_SECRET,
                 { expiresIn: '1h' }
-              );
-          
-              return res.status(200).json({ message: 'Login bem-sucedido', token });
-            } catch (e) {
-              return res.status(500).json({ error: 'Erro interno do servidor' });
-            }
-          }
-}
+            );
+    
+            console.log("Token gerado com sucesso:", token);
+    
+            return res.status(200).json({ message: 'Login bem-sucedido', token });
+        } catch (e) {
+            console.error("Erro no processo de login:", e);
+            return res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+    }
+}    
 
 async function uploadImage(file) {
     try {
