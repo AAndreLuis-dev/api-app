@@ -5,7 +5,7 @@ class Receita {
         this.titulo = receita.titulo;
         this.conteudo = receita.conteudo;
         this.isVerify = receita.isVerify || false;
-        this.nomeusu = receita.nomeusu;
+        //this.nomeusu = receita.nomeusu;
     }
 
     validate() {
@@ -19,9 +19,9 @@ class Receita {
             errors.push("Conteúdo deve ter entre 3 e 2000 caracteres.");
         }
 
-        if (!this.nomeusu) {
+        //if (!this.nomeusu) {
             errors.push("Nome do usuário é obrigatório.");
-        }
+        //}
 
         if (this.isVerify !== undefined && typeof this.isVerify !== 'boolean') {
             errors.push("IsVerify deve ser um valor booleano.");

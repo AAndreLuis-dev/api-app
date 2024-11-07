@@ -1,5 +1,6 @@
 import Receita from '../models/Receita.js';
 import { supabase } from '../supabase/client.js';
+import Subtema from '../models/Subtemas.js';
 import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
 import multer from 'multer';
 
@@ -12,16 +13,19 @@ class ReceitaController {
             console.log('1. Dados recebidos:', req.body);
 
             // Validar dados obrigatórios
-            if (!req.body.Titulo || !req.body.Conteudo || !req.body.nomeusu) {
+            if (!req.body.Titulo || !req.body.Conteudo) {
                 throw new Error('Campos obrigatórios: Titulo, Conteudo e nomeusu');
             }
 
             // Criar objeto com os nomes EXATOS das colunas
             const novaReceita = {
-                "Titulo": req.body.Titulo,      // Exatamente como está no banco
-                "Conteudo": req.body.Conteudo,  // Exatamente como está no banco
-                "IsVerify": false,              // Exatamente como está no banco
-                "nomeusu": req.body.nomeusu     // Exatamente como está no banco
+                "titulo": req.body.Titulo,      // Exatamente como está no banco
+                "conteudo": req.body.Conteudo,  // Exatamente como está no banco
+                "isVerify": false,
+                "idUsuario": req.body.idUsuario,
+                "dataCriacao": new Date(),
+                "ultimaAlteracao": new Date(),            // Exatamente como está no banco
+                //"nomeusu": req.body.nomeusu     // Exatamente como está no banco
             };
 
             console.log('2. Dados para inserção:', novaReceita);
@@ -37,14 +41,44 @@ class ReceitaController {
                 throw receitaError;
             }
 
-            const subtemas = new Subtema(req.body.subtemas);
+            const tema = req.body.tema;
+
+            if (!tema) {
+                throw new Error('Campo "tema" é obrigatório');
+            }
+
+            // Criação subtema
+            const subtemas = new Subtema(req.body.subtema);
             const resultSubtemas = await subtemas.validate();
 
-            for (const subtema of resultSubtemas.subtemasExistentes) {
-                const { data, error } = await supabase
+            const correlacaoReceitasData = resultSubtemas.subtemasExistentes.map(subtema => {
+                return {
+                    idReceita: receitaData.id,    
+                    subtema: subtema,              
+                    tema: req.body.tema,          
+                };
+            });
+
+            if (correlacaoReceitasData.length > 0) {
+                const { error: correlacaoError } = await supabase
                     .from('correlacaoReceitas')
-                    .insert([{ idReceita: receitaData.Id, subtema: subtema }]);
-                if (error) throw error;
+                    .insert(correlacaoReceitasData);
+
+                if (correlacaoError) {
+                    console.log('Erro ao inserir subtemas:', correlacaoError);
+                    throw correlacaoError;
+                }
+            } else {
+                console.log('Nenhum subtema válido para inserir.');
+            }
+
+            const { data: subtemasAssociados, error: erroSubtemas } = await supabase
+                .from('correlacaoReceitas')
+                .select('subtema')
+                .eq('idReceita', receitaData.id);
+
+            if (erroSubtemas) {
+                throw erroSubtemas;
             }
 
             // Upload das imagens
@@ -72,6 +106,7 @@ class ReceitaController {
                 message: 'Receita criada com sucesso',
                 data: {
                     ...receitaData,
+                    subtemas: subtemasAssociados.map(item => item.subtema),  // Adiciona os subtemas associados
                     imagens: imageUrls
                 }
             });
