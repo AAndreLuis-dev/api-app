@@ -1,6 +1,8 @@
+import { supabase } from '../supabase/client.js';
+
 class Subtema {
   constructor(subtemas) {
-    this.subtemas = subtemas;
+    this.subtemas = Array.isArray(subtemas) ? subtemas : [];
   }
 
   async validate() {
@@ -11,21 +13,19 @@ class Subtema {
     };
 
     for (let subtema of this.subtemas) {
-      if (this.isValidText(subtema)) {
-        const subtemaFormatado = subtema.toLowerCase();
-        try {
-          const subtemaExiste = await this.verifyBd(subtemaFormatado);
+      const subtemaFormatado = subtema.trim(); 
 
-          if (subtemaExiste) {
-            resultado.subtemasExistentes.push(subtema);
-          } else {
-            resultado.subtemasNaoExistentes.push(subtema);
-          }
-        } catch (e) {
-          resultado.erros.push({ subtema, mensagem: e.message });
+      try {
+        const subtemaExiste = await this.verifyBd(subtemaFormatado);
+
+        if (subtemaExiste) {
+          resultado.subtemasExistentes.push(subtemaFormatado);
+        } else {
+          await this.createSubtema(subtemaFormatado);
+          resultado.subtemasExistentes.push(subtemaFormatado); 
         }
-      } else {
-        resultado.erros.push({ subtema, mensagem: 'Subtema escrito de forma incorreta.' });
+      } catch (e) {
+        resultado.erros.push({ subtema: subtemaFormatado, mensagem: e.message });
       }
     }
 
@@ -35,24 +35,30 @@ class Subtema {
   async verifyBd(subtema) {
     try {
       const { data: subtemaBd, error } = await supabase
-        .from("subTemas")
-        .select("subTemas")
-        .eq("subTemas", subtema)
-        .single();
+        .from('subTema')
+        .select('descricao')
+        .eq('descricao', subtema);
 
-      if (error && error.details !== 'No rows found') {
+      if (error) {
         throw new Error(error.message);
       }
 
-      return !!subtemaBd;
+      return subtemaBd && subtemaBd.length > 0;
     } catch (e) {
-      console.error(e.message);
       throw new Error('Erro ao verificar o subtema no banco de dados.');
     }
   }
 
-  isValidText(text) {
-    const regex = /^[a-zA-Z\s]+$/; 
-    return regex.test(text);
+  async createSubtema(subtema) {
+    try {
+      const { data, error } = await supabase
+        .from('subTema')
+        .insert([{ descricao: subtema }]);
+
+    } catch (e) {
+      throw new Error(`Erro ao criar subtema "${subtema}"`);
+    }
   }
 }
+
+export default Subtema;
