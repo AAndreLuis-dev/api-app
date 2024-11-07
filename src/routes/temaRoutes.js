@@ -4,8 +4,8 @@ import temaController from '../controllers/temaController.js';
 const router = new Router();
 
 router.get('/tema', temaController.index);
-router.get('/tema/existe/:tema', temaController.checkIfExists);
-router.delete('/tema/:tema', temaController.delete);
-router.get('/:tema/subtemas', temaController.getSubtemas);
+router.get('/tema/:id', temaController.checkIfExists);
+router.delete('/tema/:id', temaController.delete);
+/*router.get('/tema/:tema/subtemas', temaController.getSubtemas);*/
 
 export default router;
