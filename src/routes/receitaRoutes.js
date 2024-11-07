@@ -36,6 +36,9 @@ router.get('/receitas', ReceitaController.getAll);
 router.get('/receitas/:id', ReceitaController.getById);
 router.put('/receitas/:id', processFormData, ReceitaController.update);
 router.delete('/receitas/:id', ReceitaController.delete);
-router.patch('/receitas/:id/verify', ReceitaController.verify);
+router.patch('/receitas/:id/verificar', ReceitaController.verify);
+router.get('/:tema/receitas', ReceitaController.getAllByTheme);
+router.get('/:tema/receitas/verificadas', ReceitaController.getAllVerifiedByTheme);
+router.get('/:tema/receitas/nao-verificadas', ReceitaController.getAllNotVerifiedByTheme);
 
 export default router;
