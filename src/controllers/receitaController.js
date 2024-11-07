@@ -1,301 +1,151 @@
 import Receita from '../models/Receita.js';
 import { supabase } from '../supabase/client.js';
+import Subtema from '../models/Subtemas.js';
 import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
+import multer from 'multer';
 
 class ReceitaController {
-
     async create(req, res) {
-        let uploadedImagePath = null;
+        let imageUrls = [];
         try {
-            const receita = new Receita(req.body);
-            const { valid, errors } = receita.validate();
-
-            if (!valid) return handleError(res, errors, 400, 'Receita Inválida');
-
-            let imgURL = null;
-
-            if (req.file) {
-                const uploadResult = await uploadImage(req.file);
-                imgURL = uploadResult.url;
-                uploadedImagePath = uploadResult.path;
+            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema) {
+                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario e tema');
             }
 
-            const { data, error } = await supabase
-                .from('receitas')
-                .insert([{
-                    titulo: receita.titulo,
-                    imgurl: imgURL || receita.imgURL,
-                    conteudo: receita.conteudo,
-                    categoria: receita.categoria,
-                    verificado: receita.verificado || false,
-                    autor: receita.autor,
-                    tema: receita.tema,
-                    VerificadaPor: receita.verificadoPor
-                }]).select();
-
-            if (error) {
-                if (uploadedImagePath) {
-                    await supabase.storage
-                        .from('Teste')  // Supabase Bucket / Storage name
-                        .remove([uploadedImagePath]);
-                }
-                return handleError(res, error.message, 500, error.details);
-            }
-
-            return res.status(201).json({ message: 'Receita criada com sucesso', data: data[0] });
-        } catch (e) {
-            if (uploadedImagePath) {
-                await supabase.storage
-                    .from('Teste')  // Supabase Bucket / Storage name
-                    .remove([uploadedImagePath]);
-            }
-            return handleError(res, e.message);
-        }
-    }
-
-    async getAll(_req, res) {
-        try {
-            const { data: receitas, error } = await supabase
-                .from('receitas')
-                .select()
-                .order('codigo', { ascending: false });
-
-            if (error) return handleError(res, error.message, 500, error.details);
-
-            return res.status(200).json(receitas);
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async getByCode(req, res) {
-        try {
-            const { data: receita, error } = await supabase
-                .from('receitas')
-                .select(`
-                    *,
-                    ingredientes (
-                        ingrediente_id,
-                        nomeingrediente,
-                        quantidade,
-                        medida
-                    )
-                    `
-                )
-                .eq('codigo', req.params.codigo)
+            const { data: usuario, error: userError } = await supabase
+                .from('usuarios')
+                .select('email')
+                .eq('email', req.body.idUsuario)
                 .single();
 
-            if (error || !receita) return handleError(res, `A receita com o código ${req.params.codigo} não foi encontrada.`, 404, 'Receita não encontrada');
-            return res.json({ data: receita });
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async update(req, res) {
-        try {
-            const newReceita = new Receita(req.body);
-            const { valid, errors } = newReceita.validate();
-
-            if (!valid) {
-                return handleError(res, errors, 400, 'Essa receita não é válida');
+            if (userError || !usuario) {
+                throw new Error('Usuário não encontrado');
             }
 
-            let imgURL = null;
+            const novaReceita = {
+                titulo: req.body.titulo,
+                conteudo: req.body.conteudo,
+                isVerify: false,
+                idUsuario: req.body.idUsuario,
+                dataCriacao: new Date().toISOString(),
+                ultimaAlteracao: new Date().toISOString()
+            };
 
-            if (req.file) {
-                const { data, error } = await supabase.storage
-                    .from('Teste')
-                    .upload(`${Date.now()}-${req.file.originalname}`, req.file.buffer, {
-                        contentType: req.file.mimetype,
-                    });
-
-                if (error) return handleError(res, error.message, 500, 'Error uploading image');
-
-                const { data: publicURL } = supabase.storage
-                    .from('Teste')
-                    .getPublicUrl(data.path);
-
-                imgURL = publicURL.publicUrl;
-            }
-
-            const { data: updatedReceita, error: updateError } = await supabase
+            const { data: receitaData, error: receitaError } = await supabase
                 .from('receitas')
-                .update({
-                    titulo: newReceita.titulo,
-                    imgurl: imgURL || newReceita.imgURL,
-                    conteudo: newReceita.conteudo,
-                    categoria: newReceita.categoria,
-                    verificado: newReceita.verificado,
-                    autor: newReceita.autor,
-                    tema: newReceita.tema,
-                    VerificadaPor: newReceita.verificadoPor
-                })
-                .eq('codigo', req.params.codigo)
-                .select();
-
-            if (updateError) return handleError(res, updateError.message, 500, updateError.details);
-
-            if (!updatedReceita) {
-                return handleError(res, `A receita com o código ${req.params.codigo} não foi encontrada.`, 404, 'Receita não encontrada');
-            }
-
-            return res.status(200).json({ message: 'Receita atualizada com sucesso', data: updatedReceita[0] });
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async delete(req, res) {
-        try {
-            const { data, error: deleteError } = await supabase
-                .from('receitas')
-                .delete()
-                .eq('codigo', req.params.codigo)
-                .select();
-
-            if (deleteError) return handleError(res, deleteError.message, 500, deleteError.details);
-
-            if (!data) {
-                return handleError(res, `A receita com o código ${req.params.codigo} não foi encontrada.`, 404, 'Receita não encontrada');
-            }
-
-            return res.status(204).end();
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async verify(req, res) {
-        try {
-            const verificadaPor = req.body.VerificadaPor;
-            const codigo = req.params.codigo;
-
-            if (!verificadaPor) {
-                return handleError(res, `O campo 'VerificadaPor' é obrigatório.`, 400, 'Input inválido');
-            }
-
-            const { data: user, userError } = await supabase
-                .from('usuarios')
-                .select('email, nome, telefone, niveldeconcientizacao, ismonitor')
-                .eq('email', verificadaPor)
-                .maybeSingle();
-
-            if (!user || userError) {
-                return handleError(res, `O usuário com o email ${verificadaPor} não foi encontrado.`, 404, 'Usuário não encontrado');
-            }
-
-            if (!user.ismonitor) {
-                return handleError(res, `O usuário com o email ${verificadaPor} não é um monitor.`, 400, 'Usuário não é monitor');
-            }
-
-            const { data: receita, error } = await supabase
-                .from('receitas')
-                .update({
-                    verificado: true,
-                    VerificadaPor: verificadaPor
-                })
-                .eq('codigo', codigo)
-                .select();
-
-            if (error) return handleError(res, error.message, 500, error.details);
-
-            if (!receita) return handleError(res, `A receita com o código ${codigo} não foi encontrada.`, 404, 'Receita não encontrada');
-
-            return res.status(200).json({ message: `A receita com o código ${codigo} foi verificada com sucesso pelo usuário com o email ${verificadaPor}.` });
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
-
-    async getAllVerifiedByTheme(req, res) {
-        try {
-            const { tema } = req.params;
-
-            if (!TEMAS_VALIDOS.includes(tema)) {
-                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
-            }
-
-            const { data: receitas, error } = await supabase
-                .from('receitas')
+                .insert([novaReceita])
                 .select()
-                .order('codigo', { ascending: false })
-                .eq('verificado', true)
-                .eq('tema', tema);
+                .single();
 
-            if (error) return handleError(res, error.message, 500, error.details);
+            if (receitaError) throw receitaError;
 
-            return res.status(200).json(receitas);
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
+            // Validação e inserção dos subtemas
+            const subtemas = new Subtema(req.body.subtema);
+            const resultSubtemas = await subtemas.validate();
 
-    async getAllNotVerifiedByTheme(req, res) {
-        try {
-            const { tema } = req.params;
+            const correlacaoReceitasData = resultSubtemas.subtemasExistentes.map(subtema => ({
+                idReceita: receitaData.id,
+                subtema: subtema,
+                tema: req.body.tema
+            }));
 
-            if (!TEMAS_VALIDOS.includes(tema)) {
-                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
+            if (correlacaoReceitasData.length > 0) {
+                const { error: correlacaoError } = await supabase
+                    .from('correlacaoReceitas')
+                    .insert(correlacaoReceitasData);
+
+                if (correlacaoError) throw correlacaoError;
             }
 
-            const { data: receitas, error } = await supabase
-                .from('receitas')
-                .select()
-                .order('codigo', { ascending: false })
-                .eq('verificado', false)
-                .eq('tema', tema);
+            // Upload das imagens
+            if (req.files?.length > 0) {
+                for (const file of req.files) {
+                    const fileName = `${receitaData.id}-${Date.now()}-${file.originalname}`;
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('fotosReceitas')
+                        .upload(fileName, file.buffer, {
+                            contentType: file.mimetype
+                        });
 
-            if (error) return handleError(res, error.message, 500, error.details);
+                    if (uploadError) throw uploadError;
 
-            return res.status(200).json(receitas);
-        } catch (e) {
-            return handleError(res, e.message);
-        }
-    }
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('fotosReceitas')
+                        .getPublicUrl(fileName);
 
-    async getAllByTheme(req, res) {
-        try {
-            const { tema } = req.params;
+                    const { error: fotoError } = await supabase
+                        .from('fotosReceitas')
+                        .insert({
+                            idFoto: Date.now(),
+                            id: receitaData.id,
+                            url: publicUrl,
+                            createdAt: new Date().toISOString()
+                        });
 
-            if (!TEMAS_VALIDOS.includes(tema)) {
-                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
+                    if (fotoError) throw fotoError;
+                    imageUrls.push(publicUrl);
+                }
             }
 
-            const { data: receitas, error } = await supabase
+            return res.status(201).json({
+                message: 'Receita criada com sucesso',
+                data: {
+                    ...receitaData,
+                    subtemas: correlacaoReceitasData.map(item => item.subtema),
+                    imagens: imageUrls
+                }
+            });
+
+        } catch (e) {
+            if (imageUrls.length > 0) {
+                for (const url of imageUrls) {
+                    const fileName = url.split('/').pop();
+                    await supabase.storage.from('fotosReceitas').remove([fileName]);
+                }
+            }
+            return handleError(res, e.message);
+        }
+    }
+
+    async getAll(req, res) {
+        try {
+            const { data: receitas, error: receitasError } = await supabase
                 .from('receitas')
-                .select()
-                .order('codigo', { ascending: false })
-                .eq('tema', tema);
+                .select('*, correlacaoReceitas(subtema)')
+                .order('dataCriacao', { ascending: false });
 
-            if (error) return handleError(res, error.message, 500, error.details);
+            if (receitasError) throw receitasError;
 
-            return res.status(200).json(receitas);
+            const receitasComFotos = await Promise.all(receitas.map(async (receita) => {
+                const { data: fotos, error: fotosError } = await supabase
+                    .from('fotosReceitas')
+                    .select('*')
+                    .eq('id', receita.id);
+
+                if (fotosError) throw fotosError;
+
+                return {
+                    ...receita,
+                    fotos: fotos || []
+                };
+            }));
+
+            return res.json(receitasComFotos);
         } catch (e) {
             return handleError(res, e.message);
         }
     }
+
+    // Resto dos métodos...
+
 }
 
-async function uploadImage(file) {
-    const { data, error } = await supabase.storage
-        .from('Teste')  // Supabase Bucket / Storage name
-        .upload(`${Date.now()}-${file.originalname}`, file.buffer, {
-            contentType: file.mimetype,
-        });
-
-    if (error) throw new Error('Error uploading image');
-
-    const { data: publicURL } = supabase.storage
-        .from('Teste') // Supabase Bucket / Storage name
-        .getPublicUrl(data.path);
-
-    return { path: data.path, url: publicURL.publicUrl };
-}
-
-function handleError(res, detail = 'An error has occurred.', status = 500, message = 'Internal Server Error') {
+function handleError(res, detail = 'Ocorreu um erro.', status = 500) {
     if (!res.headersSent) {
-        return res.status(status).json({ message, detail });
+        return res.status(status).json({
+            message: 'Erro',
+            detail
+        });
     }
 }
 
