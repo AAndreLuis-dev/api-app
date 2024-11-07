@@ -140,7 +140,13 @@ class ReceitaController {
         try {
             const { data: receita, error: receitaError } = await supabase
                 .from('receitas')
-                .select('*')
+                .select(`
+                    *,
+                    ingredientes (
+                        *
+                    )
+                    `
+                )
                 .eq('id', req.params.id)
                 .single();
 
@@ -341,20 +347,36 @@ class ReceitaController {
 
     async verify(req, res) {
         try {
-            if (!req.body.verifyBy) {
-                return handleError(res, 'Campo verifyBy é obrigatório', 400);
+            const verifyBy = req.body.verifyBy;
+            const id = req.params.id;
+
+            if (!verifyBy) {
+                return handleError(res, `O campo 'verifyBy' é obrigátorio.`, 400, 'Input inválido');
+            }
+
+            const { data: user, userError } = await supabase
+                .from('usuarios')
+                .select('isMonitor')
+                .eq('email', verifyBy)
+                .maybeSingle();
+
+            if (!user || userError) {
+                return handleError(res, `O usuário com o email ${verifyBy} não foi encontrado.`, 404, 'Usuário não encontrado');
+            }
+
+            if (!user.isMonitor) {
+                return handleError(res, `O usuário com o email ${verifyBy} não é um monitor.`, 400, 'Usuário não é monitor');
             }
 
             const { data: receita, error } = await supabase
                 .from('receitas')
                 .update({
                     isVerify: true,
-                    verifyBy: req.body.verifyBy,
+                    verifyBy: verifyBy,
                     ultimaAlteracao: new Date().toISOString()
                 })
-                .eq('id', req.params.id)
-                .select()
-                .single();
+                .eq('id', id)
+                .select();
 
             if (error) throw error;
             if (!receita) return handleError(res, 'Receita não encontrada', 404);
@@ -367,10 +389,85 @@ class ReceitaController {
             return handleError(res, e.message);
         }
     }
+    async getAllVerifiedByTheme(req, res) {
+        try {
+            const { tema } = req.params;
+            if (!TEMAS_VALIDOS.includes(tema)) {
+                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
+            }
+            const { data: idPost, error: idPostError } = await supabase
+                .from('correlacaoReceitas')
+                .select('idReceita')
+                .eq('tema', tema);
 
+            if (idPostError) return handleError(res, idPostError.message, 500, idPostError.details);
+            if (!idPost) return handleError(res, 'Nenhuma receita encontrada', 404);
+
+            const { data: receitas, error } = await supabase
+                .from('receitas')
+                .select()
+                .in('id', idPost.map(post => post.idReceita))
+                .eq('isVerify', true);
+            if (error) return handleError(res, error.message, 500, error.details);
+            return res.status(200).json(receitas);
+        } catch (e) {
+            return handleError(res, e.message);
+        }
+    }
+    async getAllNotVerifiedByTheme(req, res) {
+        try {
+            const { tema } = req.params;
+            if (!TEMAS_VALIDOS.includes(tema)) {
+                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
+            }
+            const { data: idPost, error: idPostError } = await supabase
+                .from('correlacaoReceitas')
+                .select('idReceita')
+                .eq('tema', tema);
+
+            if (idPostError) return handleError(res, idPostError.message, 500, idPostError.details);
+            if (!idPost) return handleError(res, 'Nenhuma receita encontrada', 404);
+
+            const { data: receitas, error } = await supabase
+                .from('receitas')
+                .select()
+                .in('id', idPost.map(post => post.idReceita))
+                .eq('isVerify', false);
+            if (error) return handleError(res, error.message, 500, error.details);
+            return res.status(200).json(receitas);
+        } catch (e) {
+            return handleError(res, e.message);
+        }
+    }
+    async getAllByTheme(req, res) {
+        try {
+            const { tema } = req.params;
+            if (!TEMAS_VALIDOS.includes(tema)) {
+                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
+            }
+            const { data: idPost, error: idPostError } = await supabase
+                .from('correlacaoReceitas')
+                .select('idReceita')
+                .eq('tema', tema);
+
+            if (idPostError) return handleError(res, idPostError.message, 500, idPostError.details);
+            if (!idPost) return handleError(res, 'Nenhuma receita encontrada', 404);
+
+            const { data: receitas, error } = await supabase
+                .from('receitas')
+                .select()
+                .in('id', idPost.map(post => post.idReceita));
+
+            if (error) return handleError(res, error.message, 500, error.details);
+            return res.status(200).json(receitas);
+        } catch (e) {
+            return handleError(res, e.message);
+        }
+    }
 }
 
 function handleError(res, detail = 'Ocorreu um erro.', status = 500) {
+    console.error('Erro:', detail);
     if (!res.headersSent) {
         return res.status(status).json({
             message: 'Erro',
