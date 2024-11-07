@@ -20,7 +20,6 @@ class UserController {
             });
 
             const { valid, errors } = user.validate();
-
             if (!valid) return res.status(400).json({ errors });
 
             let fotoUsuarioURL = null;
@@ -178,6 +177,36 @@ class UserController {
             return res.status(400).json({ errors: [e.message] });
         }
     }
+    async loginUser(req, res) {
+        const { email, senha } = req.body;
+          
+        try {
+          const { data: user, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('email', email)
+            .single();
+          
+            if (error || !user) {
+                return res.status(400).json({ error: 'Usuário não encontrado ou erro na busca' });
+              }
+    
+              const validPassword = await argon2.verify(user.senha, senha);
+              if (!validPassword) {
+                return res.status(401).json({ error: 'Credenciais inválidas' });
+              }
+          
+              const token = jwt.sign(
+                { userId: user.id, email: user.email },
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+              );
+          
+              return res.status(200).json({ message: 'Login bem-sucedido', token });
+            } catch (e) {
+              return res.status(500).json({ error: 'Erro interno do servidor' });
+            }
+          }
 }
 
 async function uploadImage(file) {
@@ -200,6 +229,9 @@ async function uploadImage(file) {
     } catch (e) {
         throw new Error(`Erro ao fazer upload da imagem: ${e.message}`);
     }
+
 }
+
+
 
 export default new UserController();
