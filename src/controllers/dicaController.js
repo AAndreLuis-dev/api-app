@@ -1,6 +1,7 @@
 import Dica from '../models/Dica.js';
 import { supabase } from '../supabase/client.js';
 import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
+import Subtema from "../models/Subtemas.js";
 
 class DicaController {
 
@@ -12,16 +13,63 @@ class DicaController {
 
             if (!valid) return handleError(res, errors, 400, 'Dica Inválida');
 
-            const { data, error } = await supabase
+            const tema = req.body.tema;
+            const subtema = req.body.subtema;
+
+            if (!TEMAS_VALIDOS.includes(tema)) {
+                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Tema inválido');
+            }
+
+            const subtemaObj = new Subtema([subtema]);
+            const resultadoSubtema = await subtemaObj.validate();
+
+            if (resultadoSubtema.erros.length > 0) {
+                return handleError(res, resultadoSubtema.erros, 400, 'Erro ao processar subtema');
+            }
+
+            const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
+                .from('temaSubtema')
+                .select('*')
+                .eq('tema', tema)
+                .eq('subtema', subtema);
+
+            if (temaSubtemaError) {
+                return handleError(res, temaSubtemaError.message, 500, 'Erro ao verificar relação tema-subtema');
+            }
+
+            if (temaSubtemaData.length === 0) {
+                const { error: insertTemaSubtemaError } = await supabase
+                    .from('temaSubtema')
+                    .insert({
+                        tema: tema,
+                        subtema: subtema,
+                    });
+
+                if (insertTemaSubtemaError) {
+                    return handleError(res, insertTemaSubtemaError.message, 500, 'Erro ao criar relação tema-subtema');
+                }
+            }
+
+            const { data: dicaData, error: dicaError } = await supabase
                 .from('dicas')
                 .insert({
                     usuarioId: dica.usuarioId,
                     conteudo: dica.conteudo,
                 }).select();
 
-            if (error) return handleError(res, error.message, 500, error.details);
+            if (dicaError) return handleError(res, dicaError.message, 500, dicaError.details);
+            
+            const { data: correlacaoData, error: correlacaoError } = await supabase
+                .from('correlacaoDicas')
+                .insert({
+                    idDicas: dicaData[0].id,
+                    tema: tema,
+                    subtema: subtema,
+                });
 
-            return res.status(201).json({ message: 'Dica criada com sucesso', data: data[0] });
+            if (correlacaoError) return handleError(res, correlacaoError.message, 500, correlacaoError.details);
+
+            return res.status(201).json({ message: 'Dica criada com sucesso', data: dicaData[0] });
         } catch (e) {
             return handleError(res, e.message);
         }
