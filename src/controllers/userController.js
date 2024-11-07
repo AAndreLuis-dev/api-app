@@ -1,37 +1,51 @@
 import User from '../models/User.js';
 import { supabase } from '../supabase/client.js';
 import { v4 as uuidv4 } from 'uuid';
+import argon2 from 'argon2';
+import jwt from 'jsonwebtoken';
 
 class UserController {
     async store(req, res) {
         let uploadedImagePath = null;
         try {
-            const user = new User(req.body);
+            const user = new User({
+                email: req.body.email,
+                tokens: req.body.tokens,
+                senha: req.body.senha,
+                nome: req.body.nome,
+                telefone: req.body.telefone,
+                nivelConsciencia: req.body.nivelConsciencia,
+                isMonitor: req.body.isMonitor,
+                fotoUsu: null
+            });
+
             const { valid, errors } = user.validate();
 
             if (!valid) return res.status(400).json({ errors });
 
             let fotoUsuarioURL = null;
 
+            // Se a imagem foi carregada
             if (req.file) {
                 const uploadResult = await uploadImage(req.file);
-                console.log(uploadResult.url);
                 fotoUsuarioURL = uploadResult.url;
                 uploadedImagePath = uploadResult.path;
             }
+
+            // O hash da senha é gerado aqui
+            const hashedPassword = await argon2.hash(user.senha);
 
             const { data, error } = await supabase
                 .from('usuarios')
                 .insert([{
                     email: user.email,
-                    senha: user.senha,
-                    tokens: user.tokens,
+                    senha: hashedPassword,
                     nome: user.nome,
                     telefone: user.telefone,
-                    niveldeconcientizacao: user.niveldeconcientizacao,
-                    ismonitor: user.ismonitor,
-                    fotoUsuario: fotoUsuarioURL,
-                    endereco: user.endereco
+                    nivelConsciencia: user.nivelConsciencia,
+                    isMonitor: user.isMonitor,
+                    tokens: user.tokens,
+                    fotoUsu: fotoUsuarioURL
                 }]);
 
             if (error) {
@@ -55,11 +69,12 @@ class UserController {
         }
     }
 
+    //funcionando pos alteracao bd
     async index(req, res) {
         try {
             const { data: users, error } = await supabase
                 .from('usuarios')
-                .select('email, nome, telefone, niveldeconcientizacao, ismonitor, fotoUsuario, endereco');
+                .select('email, nome, telefone, nivelConsciencia, isMonitor, fotoUsu');
 
             if (error) throw error;
 
@@ -69,12 +84,12 @@ class UserController {
             return res.status(400).json({ errors: [e.message] });
         }
     }
-
+    //funcionando pos alteracao bd
     async show(req, res) {
         try {
             const { data: user, error } = await supabase
                 .from('usuarios')
-                .select('email, nome, telefone, niveldeconcientizacao, ismonitor, fotoUsuario, endereco')
+                .select('email, nome, telefone, nivelConsciencia, isMonitor, fotoUsu')
                 .eq('email', req.params.email)
                 .single();
 
@@ -88,8 +103,9 @@ class UserController {
             return res.status(400).json({ errors: [e.message] });
         }
     }
-
+    //Funcionando pos alteracao
     async update(req, res) {
+        let uploadedImagePath = null;
         try {
             const { data: user, error: fetchError } = await supabase
                 .from('usuarios')
@@ -101,9 +117,26 @@ class UserController {
                 return res.status(400).json({ errors: ['Usuário não encontrado'] });
             }
 
+            let fotoUsuarioURL = user["Foto.usu"];
+
+            if (req.file) {
+                const uploadResult = await uploadImage(req.file);
+                fotoUsuarioURL = uploadResult.url;
+                uploadedImagePath = uploadResult.path;
+            }
+
+            const updatedData = {
+                ...req.body,
+                fotoUsu: fotoUsuarioURL
+            };
+
+            if (req.body.Senha) {
+                updatedData.Senha = await argon2.hash(req.body.Senha);
+            }
+
             const { error: updateError } = await supabase
                 .from('usuarios')
-                .update(req.body)
+                .update(updatedData)
                 .eq('email', req.params.email);
 
             if (updateError) throw updateError;
@@ -111,10 +144,15 @@ class UserController {
             return res.json({ message: 'Usuário atualizado com sucesso' });
 
         } catch (e) {
+            if (uploadedImagePath) {
+                await supabase.storage
+                    .from('fotoPerfil')
+                    .remove([uploadedImagePath]);
+            }
             return res.status(400).json({ errors: [e.message] });
         }
     }
-
+    // Funcionando pos alteracao
     async delete(req, res) {
         try {
             const { data: user, error: fetchError } = await supabase
@@ -153,18 +191,13 @@ async function uploadImage(file) {
 
         if (error) throw new Error(`Erro ao fazer upload da imagem: ${error.message}`);
 
-        console.log("Upload realizado com sucesso:", data);
-
         const { data: publicURL } = supabase.storage
-            .from('fotoPerfil') // Supabase Bucket / Storage name
+            .from('fotoPerfil')
             .getPublicUrl(data.path);
-
-        console.log("URL pública obtida:", publicURL);
 
         return { url: publicURL.publicUrl, path: data.path };
 
     } catch (e) {
-        console.error("Erro detalhado ao tentar fazer upload da imagem:", e);
         throw new Error(`Erro ao fazer upload da imagem: ${e.message}`);
     }
 }

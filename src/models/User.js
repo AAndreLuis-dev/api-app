@@ -2,16 +2,15 @@ import { supabase } from '../supabase/client.js'; // Importa o cliente Supabase 
 import argon2 from 'argon2';
 
 class User {
-    constructor({ email, tokens, senha, nome, telefone, niveldeconcientizacao, ismonitor, fotoUsuario, endereco }) {
+    constructor({ email, tokens, senha, nome, telefone, nivelConsciencia, isMonitor, fotoUsu }) {
         this.email = email;
         this.tokens = tokens;
         this.senha = senha;
         this.nome = nome;
         this.telefone = telefone;
-        this.niveldeconcientizacao = niveldeconcientizacao;
-        this.ismonitor = ismonitor;
-        this.fotoUsuario = fotoUsuario;
-        this.endereco = endereco;
+        this.nivelConsciencia = nivelConsciencia;
+        this.isMonitor = isMonitor;
+        this.fotoUsu = fotoUsu;
     }
 
     validate() {
@@ -30,23 +29,23 @@ class User {
             errors.push('Token inválido.');
         }
 
-        const telefoneRegex = /^\+?[1-9]\d{1,14}$/;
+        const telefoneRegex = /^\+?[1-9]\d{1,14}$/; // Validação de telefone
         if (!this.telefone || !telefoneRegex.test(this.telefone)) {
             errors.push('Número de telefone inválido.');
         }
 
         if (!this.senha || this.senha.length < 6 || this.senha.length > 255) {
-            errors.push('A senha precisa ter entre 6 e 255 caracteres.'); // Corrigido para 255
+            errors.push('A senha precisa ter entre 6 e 255 caracteres.');
         }
 
-        if (this.niveldeconcientizacao < 0 || this.niveldeconcientizacao > 5) {
+        if (this.ni_conciencia < 0 || this.ni_conciencia > 5) { // Validação do nível de conscientização
             errors.push('Nível de conscientização deve ser um número entre 0 e 5.');
         }
 
         if (errors.length > 0) {
             return { valid: false, errors };
         }
-
+        this.ni_conciencia = parseInt(this.ni_conciencia);
         return { valid: true };
     }
 
@@ -62,10 +61,9 @@ class User {
                     senha: password_hash,
                     nome: this.nome,
                     telefone: this.telefone,
-                    niveldeconcientizacao: this.niveldeconcientizacao,
-                    ismonitor: this.ismonitor,
-                    fotoUsuario: this.fotoUsuario, // Novo campo
-                    endereco: this.endereco // Novo campo
+                    ni_conciencia: this.ni_conciencia,
+                    is_monitor: this.is_monitor,
+                    foto_usuario: this.foto_usuario,
                 },
             ])
             .select();
@@ -79,7 +77,7 @@ class User {
 
     async passwordIsValid(password) {
         const { data: user, error } = await supabase
-            .from('usuarios') // Mudança para 'usuarios' em vez de 'users'
+            .from('usuarios') // Mudança para 'usuarios'
             .select('senha')
             .eq('email', this.email)
             .single();
