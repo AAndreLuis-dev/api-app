@@ -33,6 +33,43 @@ const temaController = {
         }
     },
 
+    async getSubtemasByTemaId(req, res) {
+
+        const temaId = parseInt(req.params.temaId, 10);
+    
+        try {
+            
+            const { data: temaData, error: temaError } = await supabase
+                .from('tema')
+                .select('descricao')
+                .eq('id', temaId)
+                .single();
+    
+            if (temaError) {
+                throw temaError;
+            }
+    
+            const temaDescricao = temaData.descricao;
+    
+            const { data: subtemasData, error: subtemasError } = await supabase
+                .from('temaSubtema')
+                .select('subtema')
+                .eq('tema', temaDescricao);
+    
+            if (subtemasError) {
+                throw subtemasError;
+            }
+
+            res.status(200).json(subtemasData);
+        } catch (error) {
+            res.status(500).json({
+                error: "Erro ao buscar subtemas",
+                details: error.message,
+            });
+        }
+    },
+    
+
     async delete(req, res) {
         try {
             const { id } = req.params;
