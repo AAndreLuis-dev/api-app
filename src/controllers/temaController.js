@@ -33,32 +33,17 @@ const temaController = {
         }
     },
 
-    async getSubtemasByTemaId(req, res) {
+    async getSubtemasByTema(req, res) {
 
-        const temaId = parseInt(req.params.temaId, 10);
-    
+        const tema = req.params.tema;
+        
         try {
-            
-            const { data: temaData, error: temaError } = await supabase
-                .from('tema')
-                .select('descricao')
-                .eq('id', temaId)
-                .single();
-    
-            if (temaError) {
-                throw temaError;
-            }
-    
-            const temaDescricao = temaData.descricao;
-    
-            const { data: subtemasData, error: subtemasError } = await supabase
+            const { data: subtemasData, error } = await supabase
                 .from('temaSubtema')
                 .select('subtema')
-                .eq('tema', temaDescricao);
-    
-            if (subtemasError) {
-                throw subtemasError;
-            }
+                .eq('tema', tema);
+
+            if (error) throw error;
 
             res.status(200).json(subtemasData);
         } catch (error) {

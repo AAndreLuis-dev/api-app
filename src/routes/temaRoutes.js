@@ -6,6 +6,6 @@ const router = new Router();
 router.get('/tema', temaController.index);
 router.get('/tema/:id', temaController.checkIfExists);
 router.delete('/tema/:id', temaController.delete);
-router.get('/tema/:temaId/subtemas', temaController.getSubtemasByTemaId);
+router.get('/tema/:tema/subtemas', temaController.getSubtemasByTema);
 
 export default router;
