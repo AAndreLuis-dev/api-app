@@ -4,9 +4,9 @@ import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = new Router();
 
-router.get('/temas', temaController.index);
-router.get('/temas/existe/:tema', temaController.checkIfExists);
-router.delete('/temas/:tema', authMiddleware,
-     temaController.delete);
+router.get('/tema', temaController.index);
+router.get('/tema/:id', temaController.checkIfExists);
+router.delete('/tema/:id', authMiddleware, temaController.delete);
+/*router.get('/tema/:tema/subtemas', temaController.getSubtemas);*/
 
 export default router;
