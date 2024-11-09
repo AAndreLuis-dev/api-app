@@ -117,6 +117,29 @@ class DicaController {
                 return handleError(res, errors, 400, 'Essa dica não é válida');
             }
 
+            const tema = req.body.tema;
+            const subtema = req.body.subtema;
+
+            const { data: subtemaData, error: subtemaError } = await supabase
+                .from('subTema')
+                .select('*')
+                .eq('descricao', subtema)
+                .single();
+
+            if (subtemaError && subtemaError.code !== 'PGRST116') {
+                return handleError(res, subtemaError.message, 500, 'Erro ao verificar subtema');
+            }
+
+            if (!subtemaData) {
+                const { error: insertSubtemaError } = await supabase
+                    .from('subTema')
+                    .insert({ descricao: subtema });
+
+                if (insertSubtemaError) {
+                    return handleError(res, insertSubtemaError.message, 500, 'Erro ao inserir subtema');
+                }
+            }
+
             const { data: updatedDica, error: updateError } = await supabase
                 .from('dicas')
                 .update({
@@ -126,26 +149,60 @@ class DicaController {
                 .select();
 
             if (updateError) return handleError(res, updateError.message, 500, updateError.details);
+            if (!updatedDica) return handleError(res, `A dica com o código ${req.params.id} não foi encontrada.`, 404, 'Dica não encontrada');
 
-            if (!updatedDica) {
-                return handleError(res, `A dica com o código ${req.params.id} não foi encontrada.`, 404, 'Dica não encontrada');
+            const { error: updateCorrelacaoError } = await supabase
+                .from('correlacaoDicas')
+                .update({
+                    tema: tema,
+                    subtema: subtema,
+                })
+                .eq('idDicas', req.params.id);
+
+            if (updateCorrelacaoError) return handleError(res, updateCorrelacaoError.message, 500, updateCorrelacaoError.details);
+
+            const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
+                .from('temaSubtema')
+                .select('*')
+                .eq('tema', tema)
+                .eq('subtema', subtema);
+
+            if (temaSubtemaError) return handleError(res, temaSubtemaError.message, 500, 'Erro ao verificar relação tema-subtema');
+
+            if (temaSubtemaData.length === 0) {
+                const { error: insertTemaSubtemaError } = await supabase
+                    .from('temaSubtema')
+                    .insert({
+                        tema: tema,
+                        subtema: subtema,
+                    });
+
+                if (insertTemaSubtemaError) return handleError(res, insertTemaSubtemaError.message, 500, 'Erro ao atualizar relação tema-subtema');
             }
 
-            return res.status(200).json({ message: 'Dica atualizada com sucesso', data: updatedDica[0] });
+            return res.status(200).json({ message: 'Dica e correlações atualizadas com sucesso', data: updatedDica[0] });
         } catch (e) {
             return handleError(res, e.message);
         }
     }
 
     async delete(req, res) {
-        console.log(req.params.id);
         try {
-            const { error: deleteError } = await supabase
+            const dicaId = req.params.id;
+
+            const { error: deleteCorrelacaoError } = await supabase
+                .from('correlacaoDicas')
+                .delete()
+                .eq('idDicas', dicaId);
+
+            if (deleteCorrelacaoError) return handleError(res, deleteCorrelacaoError.message, 500, deleteCorrelacaoError.details);
+
+            const { error: deleteDicaError } = await supabase
                 .from('dicas')
                 .delete()
-                .eq('id', req.params.id);
+                .eq('id', dicaId);
 
-            if (deleteError) return handleError(res, deleteError.message, 500, deleteError.details);
+            if (deleteDicaError) return handleError(res, deleteDicaError.message, 500, deleteDicaError.details);
 
             return res.status(204).end();
         } catch (e) {
