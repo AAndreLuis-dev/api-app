@@ -34,6 +34,11 @@ const swaggerOptions = {
         servers: [
             {
                 url: 'http://localhost:3000/',
+                description: 'Ambiente Local backend'
+            },
+            {
+                url: 'https://api-app-seven-chi.vercel.app/',
+                description: 'Ambiente de Produção'
             },
         ],
     },
