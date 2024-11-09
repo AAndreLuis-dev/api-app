@@ -81,46 +81,6 @@ router.post('/usuario', userUpload.single('fotoUsu'), userController.store);
  *       500:
  *         description: Erro interno do servidor
  */
-/**
- * @swagger
- * /api/login:
- *   post:
- *     summary: Realiza o login do usuário
- *     tags: [Autenticação]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 description: E-mail do usuário para autenticação
- *               senha:
- *                 type: string
- *                 description: Senha do usuário para autenticação
- *     responses:
- *       200:
- *         description: Login bem-sucedido, retorna um token JWT
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Login bem-sucedido
- *                 token:
- *                   type: string
- *                   description: Token JWT gerado após login
- *       400:
- *         description: Erro de autenticação, credenciais inválidas
- *       401:
- *         description: Credenciais inválidas ou usuário não encontrado
- *       500:
- *         description: Erro interno do servidor
- */
 router.post('/usuario/login', userController.loginUser);
 
 /**
@@ -283,7 +243,6 @@ router.post('/usuario/reset', userController.resetPasswordRequest);
  *                   type: string
  *                   example: "Erro interno do servidor"
  */
-
 
 router.post('/usuario/reset/:token', userController.resetPassword);
 

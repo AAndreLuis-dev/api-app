@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 async function authMiddleware(req, res, next) {
-    const token = req.headers['authorization'].split(' ')[1];
+    const token = req.headers['authorization'];
     if(!token) return res.status(401).json({ message: 'Token não fornecido'});
 
     try{
