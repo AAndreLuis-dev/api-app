@@ -207,8 +207,7 @@ class UserController {
     
             const token = jwt.sign(
                 { userId: user.id, email: user.email },
-                process.env.JWT_SECRET,
-                { expiresIn: '1h' }
+                process.env.JWT_SECRET
             );
     
             console.log("Token gerado com sucesso:");
