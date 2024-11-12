@@ -1,10 +1,10 @@
-const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 async function authMiddleware(req, res, next) {
-    const token = req.headers['authorization'].split(' ')[1];
+    const token = req.headers['authorization'];
     if(!token) return res.status(401).json({ message: 'Token não fornecido'});
 
     try{
@@ -15,5 +15,4 @@ async function authMiddleware(req, res, next) {
         return res.status(400).json({ message: 'Token Inválido ou erro de autenticação'});
     };
 };
-
-module.exports = authMiddleware;
+export default authMiddleware;

@@ -34,11 +34,20 @@ const swaggerOptions = {
         servers: [
             {
                 url: 'http://localhost:3000/',
+                description: 'Ambiente Local backend'
+            },
+            {
+                url: 'https://api-app-seven-chi.vercel.app/',
+                description: 'Ambiente de Produção'
             },
         ],
     },
     apis: ['./src/routes/*.js'],
 };
+
+const options = {
+    customCss: '.swagger-ui .topbar { display: none }'
+}
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
@@ -55,7 +64,7 @@ class App {
         this.app.use(helmet());
         this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
         this.app.use(express.json({ limit: '50mb' }));
-        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, options));
     }
 
     routes() {

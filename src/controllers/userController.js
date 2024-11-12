@@ -3,6 +3,7 @@ import { supabase } from '../supabase/client.js';
 import { v4 as uuidv4 } from 'uuid';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 class UserController {
     async store(req, res) {
@@ -20,7 +21,6 @@ class UserController {
             });
 
             const { valid, errors } = user.validate();
-
             if (!valid) return res.status(400).json({ errors });
 
             let fotoUsuarioURL = null;
@@ -178,8 +178,123 @@ class UserController {
             return res.status(400).json({ errors: [e.message] });
         }
     }
+    async loginUser(req, res) {
+        const { email, senha } = req.body;
+        
+        try {
+            console.log("Iniciando login para o email:", email);
+    
+            const { data: user, error } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('email', email)
+                .single();
+    
+            if (error || !user) {
+                console.log("Erro ao buscar usuário ou usuário não encontrado:", error);
+                return res.status(400).json({ error: 'Usuário não encontrado ou erro na busca' });
+            }
+    
+            console.log("Usuário encontrado:", user);
+    
+            const validPassword = await argon2.verify(user.senha, senha);
+            if (!validPassword) {
+                console.log("Senha inválida para o usuário:", email);
+                return res.status(401).json({ error: 'Credenciais inválidas' });
+            }
+    
+            console.log("Senha verificada com sucesso. Gerando token...");
+    
+            const token = jwt.sign(
+                { userId: user.id, email: user.email },
+                process.env.JWT_SECRET
+            );
+    
+            console.log("Token gerado com sucesso:");
+    
+            return res.status(200).json({ message: 'Login bem-sucedido', token });
+        } catch (e) {
+            console.error("Erro no processo de login:", e);
+            return res.status(500).json({ error: 'Erro interno do servidor' });
+        }
+    }
+async resetPasswordRequest(req, res) {
+    const { email } = req.body;
+
+    try {
+        const { data: user, error } = await supabase
+            .from('usuarios')
+            .select('email')
+            .eq('email', email)
+            .single();
+
+        if (error || !user) {
+            return res.status(400).json({ error: 'Usuário não encontrado' });
+        }
+
+        const token = jwt.sign(
+            { email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Redefinição de Senha',
+            text: `Seu token de redefinição de senha é: ${token}`,
+            html: `<p>Seu token de redefinição de senha é:</p><p><strong>${token}</strong></p>`
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        return res.status(200).json({ message: 'Token de redefinição de senha enviado com sucesso' });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+}
+async resetPassword(req, res) {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const email = decoded.email;
+
+        const hashedPassword = await argon2.hash(newPassword);
+
+        const { error } = await supabase
+            .from('usuarios')
+            .update({ senha: hashedPassword })
+            .eq('email', email);
+
+        if (error) {
+            return res.status(400).json({ error: 'Erro ao atualizar a senha' });
+        }
+
+        return res.status(200).json({ message: 'Senha atualizada com sucesso' });
+    } catch (e) {
+        if (e.name === 'TokenExpiredError') {
+            return res.status(400).json({ error: 'Token expirado' });
+        } else if (e.name === 'JsonWebTokenError') {
+            return res.status(400).json({ error: 'Token inválido' });
+        }
+        
+        console.error(e);
+        return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
 }
 
+}
 async function uploadImage(file) {
     try {
         const uniqueFileName = `${uuidv4()}-${file.originalname}`;
@@ -200,6 +315,9 @@ async function uploadImage(file) {
     } catch (e) {
         throw new Error(`Erro ao fazer upload da imagem: ${e.message}`);
     }
+
 }
+
+
 
 export default new UserController();
