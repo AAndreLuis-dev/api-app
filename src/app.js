@@ -10,19 +10,6 @@ import receitaRoutes from './routes/receitaRoutes.js';
 
 /* import ingredientesRoutes from './routes/ingredienteRoutes.js' */
 
-const whiteList = ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:8080'];
-
-
-const corsOptions = {
-    origin: function (origin, callback) {
-        if (whiteList.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Não permitido pelo CORS do site'));
-        }
-    }
-};
-
 const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
@@ -60,7 +47,7 @@ class App {
     }
 
     middlewares() {
-        this.app.use(cors(corsOptions));
+        this.app.use(cors());
         this.app.use(helmet());
         this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
         this.app.use(express.json({ limit: '50mb' }));
