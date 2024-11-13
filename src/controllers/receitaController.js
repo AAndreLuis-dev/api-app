@@ -57,6 +57,22 @@ class ReceitaController {
                 if (correlacaoError) throw correlacaoError;
             }
 
+            const temaSubtemaData = resultSubtemas.subtemasExistentes.map(subtema => ({
+                tema: req.body.tema,
+                subtema: subtema
+            }));
+
+            if (temaSubtemaData.length > 0) {
+                const { error: temaSubtemaError } = await supabase
+                    .from('temaSubtema')
+                    .insert(temaSubtemaData);
+
+                if (temaSubtemaError) {
+                    console.log('Erro ao inserir dados na tabela temaSubtema:', temaSubtemaError);
+                    throw temaSubtemaError;
+                }
+            }
+
             // Upload das imagens
             if (req.files?.length > 0) {
                 for (const file of req.files) {
@@ -141,7 +157,8 @@ class ReceitaController {
             const { data: receita, error: receitaError } = await supabase
                 .from('receitas')
                 .select(`
-                    *,
+                    *, 
+                    correlacaoReceitas(subtema),
                     ingredientes (
                         *
                     )
@@ -188,6 +205,44 @@ class ReceitaController {
 
             if (findError || !receita) {
                 return handleError(res, 'Receita não encontrada', 404);
+            }
+
+            // Buscar tema atual da receita
+            const { data: correlacao, error: correlacaoError } = await supabase
+                .from('correlacaoReceitas')
+                .select('tema')
+                .eq('idReceita', req.params.id)
+                .single();
+
+            if (correlacaoError) {
+                throw new Error('Erro ao buscar tema atual da receita');
+            }
+
+            // Define tema atualizado
+            const temaAtualizado = req.body.tema || correlacao.tema;
+
+            // Atualizar subtemas, se fornecidos
+            if (req.body.subtema && Array.isArray(req.body.subtema)) {
+                // Remover subtemas antigos 
+                await supabase
+                    .from('correlacaoReceitas')
+                    .delete()
+                    .eq('idReceita', req.params.id);
+
+                // Adicionar os novos subtemas
+                const correlacaoReceitasData = req.body.subtema.map(subtema => ({
+                    idReceita: receita.id,
+                    subtema: subtema,
+                    tema: temaAtualizado
+                }));
+
+                if (correlacaoReceitasData.length > 0) {
+                    const { error: correlacaoError } = await supabase
+                        .from('correlacaoReceitas')
+                        .insert(correlacaoReceitasData);
+
+                    if (correlacaoError) throw correlacaoError;
+                }
             }
 
             // Se existem novas fotos
