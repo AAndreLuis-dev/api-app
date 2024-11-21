@@ -326,6 +326,53 @@ class DicaController {
             return handleError(res, e.message);
         }
     }
+
+    async getDica(req, res) { 
+        try {
+            const tema = req.params.tema;
+            const subtemas = req.params.subtema.split(',');
+
+            
+            const subtemasQuery = subtemas.map(subtema => `subtema.eq.${subtema}`).join(',');
+
+            const { data: correlacoes, error: correlacaoError } = await supabase
+                .from('correlacaoDicas') 
+                .select()
+                .eq("tema", tema)
+                .or(subtemasQuery);
+
+            if (correlacaoError) {
+                console.error('Erro ao buscar correlações:', correlacaoError);
+                return res.status(500).json({ error: `Erro ao buscar correlações de dicas: ${correlacaoError.message}` });
+            }
+
+            if (!correlacoes || correlacoes.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            
+            const idsDicas = [...new Set(correlacoes.map(correlacao => correlacao.idDicas))]; 
+            if (idsDicas.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            const { data: dicas, error: dicasError } = await supabase 
+                .from('dicas')
+                .select('*, correlacaoDicas(*)')
+                .in('id', idsDicas)
+                .eq('isVerify', true);
+
+            if (dicasError) {
+                console.error('Erro ao buscar dicas:', dicasError);
+                return res.status(500).json({ error: `Erro ao buscar as dicas: ${dicasError.message}` });
+            }
+
+            return res.status(200).json(dicas);
+        } catch (e) {
+            console.error('Erro ao buscar dicas por subtemas:', e);
+            return res.status(500).json({ error: `Erro interno ao processar a solicitação: ${e.message}` });
+        }
+    }
 }
 
 function handleError(res, detail = 'An error has occurred.', status = 500, message = 'Internal Server Error') {
