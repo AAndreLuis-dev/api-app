@@ -40,5 +40,7 @@ router.patch('/receitas/:id/verificar', ReceitaController.verify);
 router.get('/:tema/receitas', ReceitaController.getAllByTheme);
 router.get('/:tema/receitas/verificadas', ReceitaController.getAllVerifiedByTheme);
 router.get('/:tema/receitas/nao-verificadas', ReceitaController.getAllNotVerifiedByTheme);
+router.get('/receitas/:tema/:subtema', ReceitaController.getReceitasPorSubtemas)
+
 
 export default router;

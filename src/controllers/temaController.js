@@ -33,6 +33,28 @@ const temaController = {
         }
     },
 
+    async getSubtemasByTema(req, res) {
+
+        const tema = req.params.tema;
+        
+        try {
+            const { data: subtemasData, error } = await supabase
+                .from('temaSubtema')
+                .select('subtema')
+                .eq('tema', tema);
+
+            if (error) throw error;
+
+            res.status(200).json(subtemasData);
+        } catch (error) {
+            res.status(500).json({
+                error: "Erro ao buscar subtemas",
+                details: error.message,
+            });
+        }
+    },
+    
+
     async delete(req, res) {
         try {
             const { id } = req.params;

@@ -18,6 +18,8 @@ router.patch('/dicas/:id/verificar', authMiddleware, dicaController.verify);
 router.get('/:tema/dicas', dicaController.getAllByTheme);
 router.get('/:tema/dicas/verificadas', dicaController.getAllVerifiedByTheme);
 router.get('/:tema/dicas/nao-verificadas', dicaController.getAllNotVerifiedByTheme);
+router.get('/receitas/:tema/:subtema', dicaController.getDica); 
+
 
 export default router;
 
