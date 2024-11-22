@@ -11,14 +11,14 @@ router.get('/dicas', dicaController.getAll);
 
 router.post('/dicas', authMiddleware, dicaController.create);
 router.put('/dicas/:id', authMiddleware, dicaController.update);
-router.get('/dicas/:id', dicaController.getByCode);
+router.get('/dicas/:id', authMiddleware, dicaController.getByCode);
 router.delete('/dicas/:id', authMiddleware, dicaController.delete);
 router.patch('/dicas/:id/verificar', authMiddleware, dicaController.verify);
 
-router.get('/:tema/dicas', dicaController.getAllByTheme);
-router.get('/:tema/dicas/verificadas', dicaController.getAllVerifiedByTheme);
-router.get('/:tema/dicas/nao-verificadas', dicaController.getAllNotVerifiedByTheme);
-router.get('/receitas/:tema/:subtema', dicaController.getDica); 
+router.get('/:tema/dicas', authMiddleware, dicaController.getAllByTheme);
+router.get('/:tema/dicas/verificadas', authMiddleware, dicaController.getAllVerifiedByTheme);
+router.get('/:tema/dicas/nao-verificadas', authMiddleware, dicaController.getAllNotVerifiedByTheme);
+router.get('/receitas/:tema/:subtema', authMiddleware, dicaController.getDica); 
 
 
 export default router;
