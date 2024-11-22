@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import ReceitaController from '../controllers/receitaController.js';
+import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -31,16 +32,16 @@ const processFormData = (req, res, next) => {
 };
 
 // Rotas
-router.post('/receitas', processFormData, ReceitaController.create);
-router.get('/receitas', ReceitaController.getAll);
-router.get('/receitas/:id', ReceitaController.getById);
-router.put('/receitas/:id', processFormData, ReceitaController.update);
-router.delete('/receitas/:id', ReceitaController.delete);
-router.patch('/receitas/:id/verificar', ReceitaController.verify);
-router.get('/:tema/receitas', ReceitaController.getAllByTheme);
-router.get('/:tema/receitas/verificadas', ReceitaController.getAllVerifiedByTheme);
-router.get('/:tema/receitas/nao-verificadas', ReceitaController.getAllNotVerifiedByTheme);
-router.get('/receitas/:tema/:subtema', ReceitaController.getReceitasPorSubtemas)
+router.post('/receitas', authMiddleware, processFormData, ReceitaController.create);
+router.get('/receitas', authMiddleware, ReceitaController.getAll);
+router.get('/receitas/:id', authMiddleware, ReceitaController.getById);
+router.put('/receitas/:id', authMiddleware, processFormData, ReceitaController.update);
+router.delete('/receitas/:id', authMiddleware, ReceitaController.delete);
+router.patch('/receitas/:id/verificar', authMiddleware, ReceitaController.verify);
+router.get('/:tema/receitas', authMiddleware, ReceitaController.getAllByTheme);
+router.get('/:tema/receitas/verificadas', authMiddleware, ReceitaController.getAllVerifiedByTheme);
+router.get('/:tema/receitas/nao-verificadas', authMiddleware, ReceitaController.getAllNotVerifiedByTheme);
+router.get('/receitas/:tema/:subtema', authMiddleware, ReceitaController.getReceitasPorSubtemas);
 
 
 export default router;
