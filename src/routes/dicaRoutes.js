@@ -7,7 +7,7 @@ import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = new Router();
 
-router.get('/dicas', dicaController.getAll);
+router.get('/dicas', authMiddleware, dicaController.getAll);
 
 router.post('/dicas', authMiddleware, dicaController.create);
 router.put('/dicas/:id', authMiddleware, dicaController.update);
