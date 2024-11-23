@@ -1,3 +1,4 @@
+
 import Dica from '../models/Dica.js';
 import { supabase } from '../supabase/client.js';
 import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
