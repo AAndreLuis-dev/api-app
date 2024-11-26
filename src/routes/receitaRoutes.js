@@ -1,7 +1,6 @@
 import express from 'express';
 import multer from 'multer';
 import ReceitaController from '../controllers/receitaController.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -32,16 +31,259 @@ const processFormData = (req, res, next) => {
 };
 
 // Rotas
-router.post('/receitas', authMiddleware, processFormData, ReceitaController.create);
-router.get('/receitas', authMiddleware, ReceitaController.getAll);
-router.get('/receitas/:id', authMiddleware, ReceitaController.getById);
-router.put('/receitas/:id', authMiddleware, processFormData, ReceitaController.update);
-router.delete('/receitas/:id', authMiddleware, ReceitaController.delete);
-router.patch('/receitas/:id/verificar', authMiddleware, ReceitaController.verify);
-router.get('/:tema/receitas', authMiddleware, ReceitaController.getAllByTheme);
-router.get('/:tema/receitas/verificadas', authMiddleware, ReceitaController.getAllVerifiedByTheme);
-router.get('/:tema/receitas/nao-verificadas', authMiddleware, ReceitaController.getAllNotVerifiedByTheme);
-router.get('/receitas/:tema/:subtema', authMiddleware, ReceitaController.getReceitasPorSubtemas);
 
+/**
+ * @swagger
+ * /api/receitas:
+ *   post:
+ *     summary: Cria uma nova receita
+ *     tags: [Receitas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome:
+ *                 type: string
+ *               ingredientes:
+ *                 type: string
+ *               preparo:
+ *                 type: string
+ *               tempoPreparo:
+ *                 type: integer
+ *                 description: Tempo de preparo em minutos
+ *               categoria:
+ *                 type: string
+ *                 description: Categoria da receita
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Imagens da receita (até 8 arquivos)
+ *     responses:
+ *       201:
+ *         description: Receita criada com sucesso
+ *       400:
+ *         description: Erro ao criar a receita
+ */
+router.post('/receitas', processFormData, ReceitaController.create);
+
+/**
+ * @swagger
+ * /api/receitas:
+ *   get:
+ *     summary: Lista todas as receitas
+ *     tags: [Receitas]
+ *     responses:
+ *       200:
+ *         description: Lista de receitas
+ *       400:
+ *         description: Erro ao listar as receitas
+ */
+router.get('/receitas', ReceitaController.getAll);
+
+/**
+ * @swagger
+ * /api/receitas/{id}:
+ *   get:
+ *     summary: Obtém uma receita pelo ID
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID da receita
+ *     responses:
+ *       200:
+ *         description: Detalhes da receita
+ *       404:
+ *         description: Receita não encontrada
+ */
+router.get('/receitas/:id', ReceitaController.getById);
+
+/**
+ * @swagger
+ * /api/receitas/{id}:
+ *   put:
+ *     summary: Atualiza uma receita pelo ID
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID da receita
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome:
+ *                 type: string
+ *               ingredientes:
+ *                 type: string
+ *               preparo:
+ *                 type: string
+ *               tempoPreparo:
+ *                 type: integer
+ *               categoria:
+ *                 type: string
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Novas imagens da receita (opcional)
+ *     responses:
+ *       200:
+ *         description: Receita atualizada com sucesso
+ *       400:
+ *         description: Erro ao atualizar a receita
+ *       404:
+ *         description: Receita não encontrada
+ */
+router.put('/receitas/:id', processFormData, ReceitaController.update);
+
+/**
+ * @swagger
+ * /api/receitas/{id}:
+ *   delete:
+ *     summary: Deleta uma receita pelo ID
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID da receita
+ *     responses:
+ *       200:
+ *         description: Receita deletada com sucesso
+ *       404:
+ *         description: Receita não encontrada
+ */
+router.delete('/receitas/:id', ReceitaController.delete);
+
+/**
+ * @swagger
+ * /api/receitas/{id}/verificar:
+ *   patch:
+ *     summary: Verifica uma receita
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID da receita
+ *     responses:
+ *       200:
+ *         description: Receita verificada com sucesso
+ *       400:
+ *         description: Erro ao verificar a receita
+ *       404:
+ *         description: Receita não encontrada
+ */
+router.patch('/receitas/:id/verificar', ReceitaController.verify);
+
+/**
+ * @swagger
+ * /api/{tema}/receitas:
+ *   get:
+ *     summary: Lista receitas por tema
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: tema
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tema das receitas
+ *     responses:
+ *       200:
+ *         description: Lista de receitas por tema
+ *       400:
+ *         description: Erro ao listar receitas por tema
+ */
+router.get('/:tema/receitas', ReceitaController.getAllByTheme);
+
+/**
+ * @swagger
+ * /api/{tema}/receitas/verificadas:
+ *   get:
+ *     summary: Lista receitas verificadas por tema
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: tema
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tema das receitas
+ *     responses:
+ *       200:
+ *         description: Lista de receitas verificadas por tema
+ *       400:
+ *         description: Erro ao listar receitas verificadas por tema
+ */
+router.get('/:tema/receitas/verificadas', ReceitaController.getAllVerifiedByTheme);
+
+/**
+ * @swagger
+ * /api/{tema}/receitas/nao-verificadas:
+ *   get:
+ *     summary: Lista receitas não verificadas por tema
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: tema
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tema das receitas
+ *     responses:
+ *       200:
+ *         description: Lista de receitas não verificadas por tema
+ *       400:
+ *         description: Erro ao listar receitas não verificadas por tema
+ */
+router.get('/:tema/receitas/nao-verificadas', ReceitaController.getAllNotVerifiedByTheme);
+
+/**
+ * @swagger
+ * /api/receitas/{tema}/{subtema}:
+ *   get:
+ *     summary: Lista receitas por tema e subtema
+ *     tags: [Receitas]
+ *     parameters:
+ *       - in: path
+ *         name: tema
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tema das receitas
+ *       - in: path
+ *         name: subtema
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Subtema das receitas
+ *     responses:
+ *       200:
+ *         description: Lista de receitas por tema e subtema
+ *       400:
+ *         description: Erro ao listar receitas por tema e subtema
+ */
+router.get('/receitas/:tema/:subtema', ReceitaController.getReceitasPorSubtemas);
 
 export default router;
