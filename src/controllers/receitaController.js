@@ -1,11 +1,9 @@
-import Receita from '../models/Receita.js';
 import { supabase } from '../supabase/client.js';
-import Subtema from '../models/Subtemas.js';
 import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
-import multer from 'multer';
 
 class ReceitaController {
     async create(req, res) {
+        let imageUrls = [];
         try {
             if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema) {
                 throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema e subtema');
@@ -82,8 +80,6 @@ class ReceitaController {
                         tema,
                         subtema
                     });
-
-                if (correlacaoError) throw correlacaoError;
             }
 
             // Upload das imagens
@@ -96,23 +92,24 @@ class ReceitaController {
                             contentType: file.mimetype
                         });
 
-                if (!temaSubtemaData) {
-                    const { error: createTemaSubtemaError } = await supabase
-                        .from('temaSubtema')
-                        .insert({ tema, subtema });
+                    if (uploadError) throw uploadError;
 
-                    if (createTemaSubtemaError) throw createTemaSubtemaError;
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('fotosReceitas')
+                        .getPublicUrl(fileName);
+
+                    const { error: fotoError } = await supabase
+                        .from('fotosReceitas')
+                        .insert({
+                            idFoto: Date.now(),
+                            id: receitaData.id,
+                            url: publicUrl,
+                            createdAt: new Date().toISOString()
+                        });
+
+                    if (fotoError) throw fotoError;
+                    imageUrls.push(publicUrl);
                 }
-
-                const { error: correlacaoError } = await supabase
-                    .from('correlacaoReceitas')
-                    .insert({
-                        idReceita: receitaData.id,
-                        tema,
-                        subtema
-                    });
-
-                if (correlacaoError) throw correlacaoError;
             }
 
             return res.status(201).json({
@@ -122,7 +119,6 @@ class ReceitaController {
                     fotos: imageUrls
                 }
             });
-
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -527,53 +523,53 @@ class ReceitaController {
     }
 
 
-    
+
     async getReceitasPorSubtemas(req, res) {
         try {
-            const tema = req.params.tema; 
-            const subtemas = req.params.subtema.split(','); 
-    
+            const tema = req.params.tema;
+            const subtemas = req.params.subtema.split(',');
+
             const subtemasQuery = subtemas.map(subtema => `subtema.eq.${subtema}`).join(',');
-    
+
             const { data: correlacoes, error: correlacaoError } = await supabase
                 .from('correlacaoReceitas')
                 .select()
-                .eq("tema",tema)
-                .or(subtemasQuery);  
-    
+                .eq("tema", tema)
+                .or(subtemasQuery);
+
             if (correlacaoError) {
                 console.error('Erro ao buscar correlações:', correlacaoError);
                 return res.status(500).json({ error: `Erro ao buscar correlações de receitas: ${correlacaoError.message}` });
             }
-    
+
             if (!correlacoes || correlacoes.length === 0) {
-                return res.status(200).json([]);  
+                return res.status(200).json([]);
             }
-    
+
             const idsReceitas = [...new Set(correlacoes.map(correlacao => correlacao.idReceita))];
             if (idsReceitas.length === 0) {
-                return res.status(200).json([]);  }
-    
+                return res.status(200).json([]);
+            }
+
             const { data: receitas, error: receitasError } = await supabase
                 .from('receitas')
                 .select('*, correlacaoReceitas(*)')
-                .in('id', idsReceitas)  
+                .in('id', idsReceitas)
                 .eq('isVerify', true);
 
             if (receitasError) {
                 console.error('Erro ao buscar receitas:', receitasError);
                 return res.status(500).json({ error: `Erro ao buscar as receitas: ${receitasError.message}` });
             }
-    
+
             return res.status(200).json(receitas);
         }
-          catch (e) {
+        catch (e) {
             console.error('Erro ao buscar receitas por subtemas:', e);
             return res.status(500).json({ error: `Erro interno ao processar a solicitação: ${e.message}` });
         }
-    }   
+    }
 }
-
 
 function handleError(res, detail = 'Ocorreu um erro.', status = 500) {
     console.error('Erro:', detail);
