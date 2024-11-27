@@ -46,15 +46,20 @@ const processFormData = (req, res, next) => {
  *             type: object
  *             properties:
  *               titulo:
+ *                 required: true
  *                 type: string
  *               conteudo:
+ *                 required: true
  *                 type: string
  *               idUsuario:
+ *                 required: true
  *                 type: string
  *               tema:
+ *                 required: true
  *                 type: string
  *                 description: Gastro, Moda, Enge, Veteri, Cosme
  *               subtema:
+ *                 required: true
  *                 type: array
  *                 items:
  *                   type: string
