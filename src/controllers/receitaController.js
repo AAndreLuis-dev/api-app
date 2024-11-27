@@ -4,6 +4,7 @@ import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
 
 class ReceitaController {
     async create(req, res) {
+        let imageUrls = [];
         try {
             if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema) {
                 throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema e subtema');
@@ -84,12 +85,51 @@ class ReceitaController {
                 if (correlacaoError) throw correlacaoError;
             }
 
+            // Upload das imagens
+            if (req.files?.length > 0) {
+                for (const file of req.files) {
+                    const fileName = `${receitaData.id}-${Date.now()}-${file.originalname}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from('fotosReceitas')
+                        .upload(fileName, file.buffer, {
+                            contentType: file.mimetype
+                        });
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('fotosReceitas')
+                        .getPublicUrl(fileName);
+
+                    const { error: fotoError } = await supabase
+                        .from('fotosReceitas')
+                        .insert({
+                            idFoto: Date.now(),
+                            id: receitaData.id,
+                            url: publicUrl,
+                            createdAt: new Date().toISOString()
+                        });
+
+                    if (fotoError) throw fotoError;
+                    imageUrls.push(publicUrl);
+                }
+            }
+
             return res.status(201).json({
                 message: 'Receita criada com sucesso',
-                data: receitaData
+                data: {
+                    ...receitaData,
+                    fotos: imageUrls
+                }
             });
 
         } catch (e) {
+            if (imageUrls.length > 0) {
+                for (const url of imageUrls) {
+                    const fileName = url.split('/').pop();
+                    await supabase.storage.from('fotosReceitas').remove([fileName]);
+                }
+            }
             return handleError(res, e.message);
         }
     }
