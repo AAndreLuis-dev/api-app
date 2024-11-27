@@ -12,6 +12,10 @@ class Subtema {
       erros: []
     };
 
+    if (!Array.isArray(this.subtemas) || this.subtemas.length === 0) {
+      throw new Error("Nenhum subtema enviado.");
+    }
+
     for (let subtema of this.subtemas) {
       const subtemaFormatado = subtema.trim(); 
 
