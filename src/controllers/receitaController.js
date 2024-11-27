@@ -4,10 +4,9 @@ import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
 
 class ReceitaController {
     async create(req, res) {
-        let imageUrls = [];
         try {
-            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema) {
-                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario e tema');
+            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema) {
+                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema e subtema');
             }
 
             const { data: usuario, error: userError } = await supabase
@@ -37,85 +36,60 @@ class ReceitaController {
 
             if (receitaError) throw receitaError;
 
-            // Validação e inserção dos subtemas
-            const subtemas = new Subtema(req.body.subtema);
-            const resultSubtemas = await subtemas.validate();
+            const tema = req.body.tema;
+            const subtemas = Array.isArray(req.body.subtema) ? req.body.subtema : [req.body.subtema];
 
-            const correlacaoReceitasData = resultSubtemas.subtemasExistentes.map(subtema => ({
-                idReceita: receitaData.id,
-                subtema: subtema,
-                tema: req.body.tema
-            }));
+            for (const subtema of subtemas) {
+                const { data: subtemaData, error: subtemaError } = await supabase
+                    .from('subTema')
+                    .select('*')
+                    .eq('descricao', subtema)
+                    .single();
 
-            if (correlacaoReceitasData.length > 0) {
+                if (subtemaError && subtemaError.code !== 'PGRST116') throw subtemaError;
+
+                if (!subtemaData) {
+                    const { error: createSubtemaError } = await supabase
+                        .from('subTema')
+                        .insert({ descricao: subtema });
+
+                    if (createSubtemaError) throw createSubtemaError;
+                }
+
+                const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
+                    .from('temaSubtema')
+                    .select('*')
+                    .eq('tema', tema)
+                    .eq('subtema', subtema)
+                    .single();
+
+                if (temaSubtemaError && temaSubtemaError.code !== 'PGRST116') throw temaSubtemaError;
+
+                if (!temaSubtemaData) {
+                    const { error: createTemaSubtemaError } = await supabase
+                        .from('temaSubtema')
+                        .insert({ tema, subtema });
+
+                    if (createTemaSubtemaError) throw createTemaSubtemaError;
+                }
+
                 const { error: correlacaoError } = await supabase
                     .from('correlacaoReceitas')
-                    .insert(correlacaoReceitasData);
+                    .insert({
+                        idReceita: receitaData.id,
+                        tema,
+                        subtema
+                    });
 
                 if (correlacaoError) throw correlacaoError;
             }
 
-            const temaSubtemaData = resultSubtemas.subtemasExistentes.map(subtema => ({
-                tema: req.body.tema,
-                subtema: subtema
-            }));
-
-            if (temaSubtemaData.length > 0) {
-                const { error: temaSubtemaError } = await supabase
-                    .from('temaSubtema')
-                    .insert(temaSubtemaData);
-
-                if (temaSubtemaError) {
-                    console.log('Erro ao inserir dados na tabela temaSubtema:', temaSubtemaError);
-                    throw temaSubtemaError;
-                }
-            }
-            // Upload das imagens
-            if (req.files?.length > 0) {
-                for (const file of req.files) {
-                    const fileName = `${receitaData.id}-${Date.now()}-${file.originalname}`;
-                    const { data: uploadData, error: uploadError } = await supabase.storage
-                        .from('fotosReceitas')
-                        .upload(fileName, file.buffer, {
-                            contentType: file.mimetype
-                        });
-
-                    if (uploadError) throw uploadError;
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('fotosReceitas')
-                        .getPublicUrl(fileName);
-
-                    const { error: fotoError } = await supabase
-                        .from('fotosReceitas')
-                        .insert({
-                            idFoto: Date.now(),
-                            id: receitaData.id,
-                            url: publicUrl,
-                            createdAt: new Date().toISOString()
-                        });
-
-                    if (fotoError) throw fotoError;
-                    imageUrls.push(publicUrl);
-                }
-            }
-
             return res.status(201).json({
                 message: 'Receita criada com sucesso',
-                data: {
-                    ...receitaData,
-                    subtemas: correlacaoReceitasData.map(item => item.subtema),
-                    imagens: imageUrls
-                }
+                data: receitaData
             });
 
         } catch (e) {
-            if (imageUrls.length > 0) {
-                for (const url of imageUrls) {
-                    const fileName = url.split('/').pop();
-                    await supabase.storage.from('fotosReceitas').remove([fileName]);
-                }
-            }
             return handleError(res, e.message);
         }
     }
