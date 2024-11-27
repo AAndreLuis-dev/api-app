@@ -86,9 +86,41 @@ class ReceitaController {
                 if (correlacaoError) throw correlacaoError;
             }
 
+            // Upload das imagens
+            if (req.files?.length > 0) {
+                for (const file of req.files) {
+                    const fileName = `${receitaData.id}-${Date.now()}-${file.originalname}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from('fotosReceitas')
+                        .upload(fileName, file.buffer, {
+                            contentType: file.mimetype
+                        });
+
+                if (!temaSubtemaData) {
+                    const { error: createTemaSubtemaError } = await supabase
+                        .from('temaSubtema')
+                        .insert({ tema, subtema });
+
+                    if (createTemaSubtemaError) throw createTemaSubtemaError;
+                }
+
+                const { error: correlacaoError } = await supabase
+                    .from('correlacaoReceitas')
+                    .insert({
+                        idReceita: receitaData.id,
+                        tema,
+                        subtema
+                    });
+
+                if (correlacaoError) throw correlacaoError;
+            }
+
             return res.status(201).json({
                 message: 'Receita criada com sucesso',
-                data: receitaData
+                data: {
+                    ...receitaData,
+                    fotos: imageUrls
+                }
             });
 
         } catch (e) {

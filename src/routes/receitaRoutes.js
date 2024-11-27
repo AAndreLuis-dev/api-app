@@ -45,18 +45,19 @@ const processFormData = (req, res, next) => {
  *           schema:
  *             type: object
  *             properties:
- *               nome:
+ *               titulo:
  *                 type: string
- *               ingredientes:
+ *               conteudo:
  *                 type: string
- *               preparo:
+ *               idUsuario:
  *                 type: string
- *               tempoPreparo:
- *                 type: integer
- *                 description: Tempo de preparo em minutos
- *               categoria:
+ *               tema:
  *                 type: string
- *                 description: Categoria da receita
+ *                 description: Gastro, Moda, Enge, Veteri, Cosme
+ *               subtema:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *               files:
  *                 type: array
  *                 items:
