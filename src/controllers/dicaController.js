@@ -83,12 +83,33 @@ class DicaController {
         try {
             const { data: dicas, error } = await supabase
                 .from('dicas')
-                .select()
+                .select('*, correlacaoDicas(tema, subtema)')
                 .order('id', { ascending: false });
 
             if (error) return handleError(res, error.message, 500, error.details);
 
-            return res.status(200).json(dicas);
+            const dicasComDetalhes = await Promise.all(dicas.map(async (dica) => {
+                const subtemas = new Set();
+
+                dica.correlacaoDicas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: dica.id,
+                    titulo: dica.titulo,
+                    conteudo: dica.conteudo,
+                    isVerify: dica.isVerify,
+                    idUsuario: dica.idUsuario,
+                    verifyBy: dica.verifyBy,
+                    dataCriacao: dica.dataCriacao,
+                    ultimaAlteracao: dica.ultimaAlteracao,
+                    tema: dica.correlacaoDicas?.[0]?.tema || null,
+                    subtemas: Array.from(subtemas)
+                };
+            }));
+
+            return res.json(dicasComDetalhes);
 
         } catch (e) {
             return handleError(res, e.message);
@@ -105,7 +126,25 @@ class DicaController {
 
             if (error || !dica) return handleError(res, `A dica com o código ${req.params.id} não foi encontrada.`, 404, 'Dica não encontrada');
 
-            return res.json(dica);
+            const subtemas = new Set();
+
+            dica.correlacaoDicas?.forEach(correlacao => {
+                if (correlacao.subtema) subtemas.add(correlacao.subtema);
+            });
+
+            return res.json({
+                id: dica.id,
+                titulo: dica.titulo,
+                conteudo: dica.conteudo,
+                isVerify: dica.isVerify,
+                idUsuario: dica.idUsuario,
+                verifyBy: dica.verifyBy,
+                dataCriacao: dica.dataCriacao,
+                ultimaAlteracao: dica.ultimaAlteracao,
+                tema: dica.correlacaoDicas?.[0]?.tema || null,
+                subtemas: Array.from(subtemas)
+            });
+
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -257,11 +296,33 @@ class DicaController {
                 .from('dicas')
                 .select()
                 .eq('isVerify', true)
-                .in('id', idPost.map(post => post.idDicas));
+                .in('id', idPost.map(post => post.idDicas))
+                .order('id', { ascending: false });
 
             if (error) return handleError(res, error.message, 500, error.details);
 
-            return res.status(200).json(dicas);
+            const dicasComDetalhes = await Promise.all(dicas.map(async (dica) => {
+                const subtemas = new Set();
+
+                dica.correlacaoDicas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: dica.id,
+                    titulo: dica.titulo,
+                    conteudo: dica.conteudo,
+                    isVerify: dica.isVerify,
+                    idUsuario: dica.idUsuario,
+                    verifyBy: dica.verifyBy,
+                    dataCriacao: dica.dataCriacao,
+                    ultimaAlteracao: dica.ultimaAlteracao,
+                    tema: dica.correlacaoDicas?.[0]?.tema || null,
+                    subtemas: Array.from(subtemas)
+                };
+            }));
+
+            return res.json(dicasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -288,11 +349,33 @@ class DicaController {
                 .from('dicas')
                 .select()
                 .eq('isVerify', false)
-                .in('id', idPost.map(post => post.idDicas));
+                .in('id', idPost.map(post => post.idDicas))
+                .order('id', { ascending: false });
 
             if (error) return handleError(res, error.message, 500, error.details);
 
-            return res.status(200).json(dicas);
+            const dicasComDetalhes = await Promise.all(dicas.map(async (dica) => {
+                const subtemas = new Set();
+
+                dica.correlacaoDicas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: dica.id,
+                    titulo: dica.titulo,
+                    conteudo: dica.conteudo,
+                    isVerify: dica.isVerify,
+                    idUsuario: dica.idUsuario,
+                    verifyBy: dica.verifyBy,
+                    dataCriacao: dica.dataCriacao,
+                    ultimaAlteracao: dica.ultimaAlteracao,
+                    tema: dica.correlacaoDicas?.[0]?.tema || null,
+                    subtemas: Array.from(subtemas)
+                };
+            }));
+
+            return res.json(dicasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -310,7 +393,8 @@ class DicaController {
             const { data: idPost, error: idPostError } = await supabase
                 .from('correlacaoDicas')
                 .select('idDicas')
-                .eq('tema', tema);
+                .eq('tema', tema)
+                .order('id', { ascending: false });
 
             if (idPostError) return handleError(res, idPostError.message, 500, idPostError.details);
             if (!idPost) return handleError(res, 'Nenhuma receita encontrada', 404);
@@ -322,22 +406,43 @@ class DicaController {
 
             if (error) return handleError(res, error.message, 500, error.details);
 
-            return res.status(200).json(dicas);
+            const dicasComDetalhes = await Promise.all(dicas.map(async (dica) => {
+                const subtemas = new Set();
+
+                dica.correlacaoDicas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: dica.id,
+                    titulo: dica.titulo,
+                    conteudo: dica.conteudo,
+                    isVerify: dica.isVerify,
+                    idUsuario: dica.idUsuario,
+                    verifyBy: dica.verifyBy,
+                    dataCriacao: dica.dataCriacao,
+                    ultimaAlteracao: dica.ultimaAlteracao,
+                    tema: dica.correlacaoDicas?.[0]?.tema || null,
+                    subtemas: Array.from(subtemas)
+                };
+            }));
+
+            return res.json(dicasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
     }
 
-    async getDica(req, res) { 
+    async getDica(req, res) {
         try {
             const tema = req.params.tema;
             const subtemas = req.params.subtema.split(',');
 
-            
+
             const subtemasQuery = subtemas.map(subtema => `subtema.eq.${subtema}`).join(',');
 
             const { data: correlacoes, error: correlacaoError } = await supabase
-                .from('correlacaoDicas') 
+                .from('correlacaoDicas')
                 .select()
                 .eq("tema", tema)
                 .or(subtemasQuery);
@@ -351,24 +456,46 @@ class DicaController {
                 return res.status(200).json([]);
             }
 
-            
-            const idsDicas = [...new Set(correlacoes.map(correlacao => correlacao.idDicas))]; 
+
+            const idsDicas = [...new Set(correlacoes.map(correlacao => correlacao.idDicas))];
             if (idsDicas.length === 0) {
                 return res.status(200).json([]);
             }
 
-            const { data: dicas, error: dicasError } = await supabase 
+            const { data: dicas, error: dicasError } = await supabase
                 .from('dicas')
                 .select('*, correlacaoDicas(*)')
                 .in('id', idsDicas)
-                .eq('isVerify', true);
+                .eq('isVerify', true)
+                .order('id', { ascending: false });
 
             if (dicasError) {
                 console.error('Erro ao buscar dicas:', dicasError);
                 return res.status(500).json({ error: `Erro ao buscar as dicas: ${dicasError.message}` });
             }
 
-            return res.status(200).json(dicas);
+            const dicasComDetalhes = await Promise.all(dicas.map(async (dica) => {
+                const subtemas = new Set();
+
+                dica.correlacaoDicas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: dica.id,
+                    titulo: dica.titulo,
+                    conteudo: dica.conteudo,
+                    isVerify: dica.isVerify,
+                    idUsuario: dica.idUsuario,
+                    verifyBy: dica.verifyBy,
+                    dataCriacao: dica.dataCriacao,
+                    ultimaAlteracao: dica.ultimaAlteracao,
+                    tema: dica.correlacaoDicas?.[0]?.tema || null,
+                    subtemas: Array.from(subtemas)
+                };
+            }));
+
+            return res.json(dicasComDetalhes);
         } catch (e) {
             console.error('Erro ao buscar dicas por subtemas:', e);
             return res.status(500).json({ error: `Erro interno ao processar a solicitação: ${e.message}` });
