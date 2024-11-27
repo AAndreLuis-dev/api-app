@@ -468,7 +468,29 @@ class ReceitaController {
                 .in('id', idPost.map(post => post.idReceita))
                 .eq('isVerify', true);
             if (error) return handleError(res, error.message, 500, error.details);
-            return res.status(200).json(receitas);
+            const receitasComDetalhes = await Promise.all(receitas.map(async (receita) => {
+                const subtemas = new Set();
+
+                receita.correlacaoReceitas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: receita.id,
+                    titulo: receita.titulo,
+                    conteudo: receita.conteudo,
+                    isVerify: receita.isVerify,
+                    idUsuario: receita.idUsuario,
+                    verifyBy: receita.verifyBy,
+                    dataCriacao: receita.dataCriacao,
+                    ultimaAlteracao: receita.ultimaAlteracao,
+                    tema: receita.correlacaoReceitas?.[0]?.tema,
+                    subtemas: Array.from(subtemas),
+                    fotos: receita.fotosReceitas?.map(foto => foto.url) || []
+                };
+            }));
+
+            return res.json(receitasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -493,7 +515,29 @@ class ReceitaController {
                 .in('id', idPost.map(post => post.idReceita))
                 .eq('isVerify', false);
             if (error) return handleError(res, error.message, 500, error.details);
-            return res.status(200).json(receitas);
+            const receitasComDetalhes = await Promise.all(receitas.map(async (receita) => {
+                const subtemas = new Set();
+
+                receita.correlacaoReceitas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: receita.id,
+                    titulo: receita.titulo,
+                    conteudo: receita.conteudo,
+                    isVerify: receita.isVerify,
+                    idUsuario: receita.idUsuario,
+                    verifyBy: receita.verifyBy,
+                    dataCriacao: receita.dataCriacao,
+                    ultimaAlteracao: receita.ultimaAlteracao,
+                    tema: receita.correlacaoReceitas?.[0]?.tema,
+                    subtemas: Array.from(subtemas),
+                    fotos: receita.fotosReceitas?.map(foto => foto.url) || []
+                };
+            }));
+
+            return res.json(receitasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -518,7 +562,29 @@ class ReceitaController {
                 .in('id', idPost.map(post => post.idReceita));
 
             if (error) return handleError(res, error.message, 500, error.details);
-            return res.status(200).json(receitas);
+            const receitasComDetalhes = await Promise.all(receitas.map(async (receita) => {
+                const subtemas = new Set();
+
+                receita.correlacaoReceitas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: receita.id,
+                    titulo: receita.titulo,
+                    conteudo: receita.conteudo,
+                    isVerify: receita.isVerify,
+                    idUsuario: receita.idUsuario,
+                    verifyBy: receita.verifyBy,
+                    dataCriacao: receita.dataCriacao,
+                    ultimaAlteracao: receita.ultimaAlteracao,
+                    tema: receita.correlacaoReceitas?.[0]?.tema,
+                    subtemas: Array.from(subtemas),
+                    fotos: receita.fotosReceitas?.map(foto => foto.url) || []
+                };
+            }));
+
+            return res.json(receitasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -564,7 +630,29 @@ class ReceitaController {
                 return res.status(500).json({ error: `Erro ao buscar as receitas: ${receitasError.message}` });
             }
 
-            return res.status(200).json(receitas);
+            const receitasComDetalhes = await Promise.all(receitas.map(async (receita) => {
+                const subtemas = new Set();
+
+                receita.correlacaoReceitas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: receita.id,
+                    titulo: receita.titulo,
+                    conteudo: receita.conteudo,
+                    isVerify: receita.isVerify,
+                    idUsuario: receita.idUsuario,
+                    verifyBy: receita.verifyBy,
+                    dataCriacao: receita.dataCriacao,
+                    ultimaAlteracao: receita.ultimaAlteracao,
+                    tema: receita.correlacaoReceitas?.[0]?.tema,
+                    subtemas: Array.from(subtemas),
+                    fotos: receita.fotosReceitas?.map(foto => foto.url) || []
+                };
+            }));
+
+            return res.json(receitasComDetalhes);
         }
         catch (e) {
             console.error('Erro ao buscar receitas por subtemas:', e);
