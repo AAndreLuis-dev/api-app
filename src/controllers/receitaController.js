@@ -80,6 +80,8 @@ class ReceitaController {
                         tema,
                         subtema
                     });
+
+                if (correlacaoError) throw correlacaoError;
             }
 
             // Upload das imagens
