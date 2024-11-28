@@ -558,7 +558,7 @@ class ReceitaController {
 
             const { data: receitas, error } = await supabase
                 .from('receitas')
-                .select()
+                .select('*, correlacaoReceitas(tema, subtema), fotosReceitas(url)')
                 .in('id', idPost.map(post => post.idReceita));
 
             if (error) return handleError(res, error.message, 500, error.details);
@@ -621,7 +621,7 @@ class ReceitaController {
 
             const { data: receitas, error: receitasError } = await supabase
                 .from('receitas')
-                .select('*, correlacaoReceitas(*)')
+                .select('*, correlacaoReceitas(tema, subtema), fotosReceitas(url)')
                 .in('id', idsReceitas)
                 .eq('isVerify', true);
 
