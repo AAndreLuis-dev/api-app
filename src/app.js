@@ -47,11 +47,11 @@ class App {
         this.app.use(helmet());
         this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
         this.app.use(express.json({ limit: '50mb' }));
-        this.app.use(
-            '/api-docs',
-            swaggerUi.serve,
-            swaggerUi.setup(swaggerDocs, { customCssUrl: CSS_URL })
-        );
+        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+            customCss:
+                '.swagger-ui .opblock .opblock-summary-path-description-wrapper { align-items: center; display: flex; flex-wrap: wrap; gap: 0 10px; padding: 0 10px; width: 100%; }',
+            customCssUrl: CSS_URL,
+        }
     }
 
     routes() {
