@@ -1,12 +1,13 @@
 import { supabase } from '../supabase/client.js';
 import { TEMAS_VALIDOS } from '../utils/temas_validos.js';
+import Ingrendiente from "../models/Ingrediente.js";
 
 class ReceitaController {
     async create(req, res) {
         let imageUrls = [];
         try {
-            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema) {
-                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema e subtema');
+            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema || !req.body.ingredientes) {
+                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema, subtema, ingredientes');
             }
 
             const { data: usuario, error: userError } = await supabase
@@ -84,7 +85,18 @@ class ReceitaController {
                 if (correlacaoError) throw correlacaoError;
             }
 
-            // Upload das imagens
+            const ingredientes = req.body.ingredientes;
+            for (const ingrediente of ingredientes) {
+                const ingredienteObj = new Ingrendiente(ingrediente);
+                const { valid, errors } = ingredienteObj.validate();
+
+                if (!valid) {
+                    throw new Error(errors.join(', '));
+                }
+
+                await ingredienteObj.save(receitaData.id);
+            }
+
             if (req.files?.length > 0) {
                 for (const file of req.files) {
                     const fileName = `${receitaData.id}-${Date.now()}-${file.originalname}`;
@@ -193,10 +205,6 @@ class ReceitaController {
     async update(req, res) {
         let imageUrls = [];
         try {
-            console.log('1. Body recebido:', req.body);
-            console.log('2. Files recebidos:', req.files?.length);
-
-            // Validação dos dados recebidos
             if (!req.body.titulo && !req.body.conteudo && !req.files?.length) {
                 return handleError(res, 'Nenhum dado para atualizar foi fornecido', 400);
             }
@@ -211,47 +219,89 @@ class ReceitaController {
                 return handleError(res, 'Receita não encontrada', 404);
             }
 
-            // Buscar tema atual da receita
             const { data: correlacao, error: correlacaoError } = await supabase
                 .from('correlacaoReceitas')
                 .select('tema')
                 .eq('idReceita', req.params.id)
                 .single();
 
-            if (correlacaoError) {
-                throw new Error('Erro ao buscar tema atual da receita');
+            const temaAtualizado = correlacaoError || !correlacao ? req.body.tema : correlacao.tema;
+
+            if (!temaAtualizado) {
+                throw new Error('Nenhum tema disponível para a receita');
             }
 
-            // Define tema atualizado
-            const temaAtualizado = req.body.tema || correlacao.tema;
-
-            // Atualizar subtemas, se fornecidos
             if (req.body.subtema && Array.isArray(req.body.subtema)) {
-                // Remover subtemas antigos 
                 await supabase
                     .from('correlacaoReceitas')
                     .delete()
                     .eq('idReceita', req.params.id);
 
-                // Adicionar os novos subtemas
-                const correlacaoReceitasData = req.body.subtema.map(subtema => ({
-                    idReceita: receita.id,
-                    subtema: subtema,
-                    tema: temaAtualizado
-                }));
+                for (const subtema of req.body.subtema) {
+                    const { data: subtemaData, error: subtemaError } = await supabase
+                        .from('subTema')
+                        .select('*')
+                        .eq('descricao', subtema)
+                        .single();
 
-                if (correlacaoReceitasData.length > 0) {
+                    if (subtemaError && subtemaError.code !== 'PGRST116') throw subtemaError;
+
+                    if (!subtemaData) {
+                        const { error: createSubtemaError } = await supabase
+                            .from('subTema')
+                            .insert({ descricao: subtema });
+
+                        if (createSubtemaError) throw createSubtemaError;
+                    }
+
+                    const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
+                        .from('temaSubtema')
+                        .select('*')
+                        .eq('tema', temaAtualizado)
+                        .eq('subtema', subtema)
+                        .single();
+
+                    if (temaSubtemaError && temaSubtemaError.code !== 'PGRST116') throw temaSubtemaError;
+
+                    if (!temaSubtemaData) {
+                        const { error: createTemaSubtemaError } = await supabase
+                            .from('temaSubtema')
+                            .insert({ tema: temaAtualizado, subtema });
+
+                        if (createTemaSubtemaError) throw createTemaSubtemaError;
+                    }
+
                     const { error: correlacaoError } = await supabase
                         .from('correlacaoReceitas')
-                        .insert(correlacaoReceitasData);
+                        .insert({
+                            idReceita: receita.id,
+                            tema: temaAtualizado,
+                            subtema
+                        });
 
                     if (correlacaoError) throw correlacaoError;
                 }
             }
 
-            // Se existem novas fotos
+            if (req.body.ingredientes && Array.isArray(req.body.ingredientes)) {
+                await supabase
+                    .from('ingredientes')
+                    .delete()
+                    .eq('postagemId', req.params.id);
+
+                for (const ingrediente of req.body.ingredientes) {
+                    const ingredienteObj = new Ingrendiente(ingrediente);
+                    const { valid, errors } = ingredienteObj.validate();
+
+                    if (!valid) {
+                        throw new Error(errors.join(', '));
+                    }
+
+                    await ingredienteObj.save(req.params.id);
+                }
+            }
+
             if (req.files?.length > 0) {
-                // Deletar fotos antigas
                 const { data: fotosAntigas } = await supabase
                     .from('fotosReceitas')
                     .select('*')
@@ -271,11 +321,9 @@ class ReceitaController {
                         .eq('id', req.params.id);
                 }
 
-                // Upload novas fotos
                 for (const file of req.files) {
                     const fileName = `${receita.id}-${Date.now()}-${file.originalname}`;
-
-                    const { data: uploadData, error: uploadError } = await supabase.storage
+                    const { error: uploadError } = await supabase.storage
                         .from('fotosReceitas')
                         .upload(fileName, file.buffer, {
                             contentType: file.mimetype
@@ -301,7 +349,6 @@ class ReceitaController {
                 }
             }
 
-            // Atualiza dados da receita
             const dadosAtualizados = {
                 titulo: req.body.titulo || receita.titulo,
                 conteudo: req.body.conteudo || receita.conteudo,
@@ -327,7 +374,6 @@ class ReceitaController {
             });
 
         } catch (e) {
-            console.error('Erro completo:', e);
             if (imageUrls.length > 0) {
                 for (const url of imageUrls) {
                     const fileName = url.split('/fotosReceitas/').pop();

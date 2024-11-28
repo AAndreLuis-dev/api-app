@@ -1,7 +1,7 @@
-class Ingrendiente {
+import {supabase} from "../supabase/client.js";
 
+class Ingrediente {
     constructor({ nomeIngrediente, quantidade, medida }) {
-
         this.nomeIngrediente = nomeIngrediente;
         this.quantidade = quantidade;
         this.medida = medida;
@@ -10,16 +10,16 @@ class Ingrendiente {
     validate() {
         const errors = [];
 
-        if (this.nomeIngrediente.length < 1 || this.nomeCriador.length > 20) {
+        if (this.nomeIngrediente.length < 1 || this.nomeIngrediente.length > 20) {
             errors.push('Nome do ingrediente deve ter entre 1 e 20 caracteres.');
         }
 
-        if (this.quantidade.length < 0) {
-            errors.push('Quantidade deve ser acima de 0');
+        if (this.quantidade <= 0) {
+            errors.push('Quantidade deve ser maior que 0.');
         }
 
-        if (typeof this.medida === 'number') {
-            errors.push('Medida deve ser uma sting, ex: Unidade, Centimetros.');
+        if (typeof this.medida !== 'string') {
+            errors.push('Medida deve ser uma string, ex: Unidade, Centímetros.');
         }
 
         if (errors.length > 0) {
@@ -34,11 +34,11 @@ class Ingrendiente {
             .from('ingredientes')
             .insert([
                 {
-                    nomeingrediente: this.nomeIngrediente,
+                    ingrediente: this.nomeIngrediente,
                     quantidade: this.quantidade,
                     medida: this.medida,
-                    postagem_id: postagemId,
-                },
+                    postagemId: postagemId
+                }
             ]);
 
         if (error) {
@@ -48,5 +48,4 @@ class Ingrendiente {
         return data;
     }
 }
-
-export default Ingrendiente;
+export default Ingrediente;
