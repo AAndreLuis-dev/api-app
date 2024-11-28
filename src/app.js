@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
 import temaRoutes from './routes/temaRoutes.js';
@@ -34,7 +35,7 @@ const swaggerOptions = {
 
 const options = {
     customCss: '.swagger-ui .topbar { display: none }'
-}
+};
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
@@ -51,7 +52,10 @@ class App {
         this.app.use(helmet());
         this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
         this.app.use(express.json({ limit: '50mb' }));
-        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, options));
+        const swaggerStaticPath = path.dirname(require.resolve('swagger-ui-dist/swagger-ui.css'));
+        this.app.use('/swagger-static', express.static(swaggerStaticPath));
+
+        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, { ...options, customCssUrl: '/swagger-static/swagger-ui.css' }));
     }
 
     routes() {
