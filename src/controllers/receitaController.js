@@ -131,26 +131,34 @@ class ReceitaController {
         try {
             const { data: receitas, error: receitasError } = await supabase
                 .from('receitas')
-                .select('*, correlacaoReceitas(subtema)')
+                .select('*, correlacaoReceitas(tema, subtema), fotosReceitas(url)')
                 .order('dataCriacao', { ascending: false });
 
             if (receitasError) throw receitasError;
 
-            const receitasComFotos = await Promise.all(receitas.map(async (receita) => {
-                const { data: fotos, error: fotosError } = await supabase
-                    .from('fotosReceitas')
-                    .select('*')
-                    .eq('id', receita.id);
+            const receitasComDetalhes = await Promise.all(receitas.map(async (receita) => {
+                const subtemas = new Set();
 
-                if (fotosError) throw fotosError;
+                receita.correlacaoReceitas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
 
                 return {
-                    ...receita,
-                    fotos: fotos || []
+                    id: receita.id,
+                    titulo: receita.titulo,
+                    conteudo: receita.conteudo,
+                    isVerify: receita.isVerify,
+                    idUsuario: receita.idUsuario,
+                    verifyBy: receita.verifyBy,
+                    dataCriacao: receita.dataCriacao,
+                    ultimaAlteracao: receita.ultimaAlteracao,
+                    tema: receita.correlacaoReceitas?.[0]?.tema,
+                    subtemas: Array.from(subtemas),
+                    fotos: receita.fotosReceitas?.map(foto => foto.url) || []
                 };
             }));
 
-            return res.json(receitasComFotos);
+            return res.json(receitasComDetalhes);
         } catch (e) {
             return handleError(res, e.message);
         }
@@ -162,28 +170,35 @@ class ReceitaController {
                 .from('receitas')
                 .select(`
                     *, 
-                    correlacaoReceitas(subtema),
-                    ingredientes (
-                        *
-                    )
+                    correlacaoReceitas(tema, subtema),
+                    ingredientes (*),
+                    fotosReceitas(url)
                     `
                 )
                 .eq('id', req.params.id)
                 .single();
 
-            if (receitaError) throw receitaError;
             if (!receita) return handleError(res, 'Receita não encontrada', 404);
+            if (receitaError) throw receitaError;
 
-            const { data: fotos, error: fotosError } = await supabase
-                .from('fotosReceitas')
-                .select('*')
-                .eq('id', receita.id);
-
-            if (fotosError) throw fotosError;
+            const subtemas = new Set();
+            receita.correlacaoReceitas?.forEach(correlacao => {
+                if (correlacao.subtema) subtemas.add(correlacao.subtema);
+            });
 
             return res.json({
-                ...receita,
-                fotos: fotos || []
+                id: receita.id,
+                titulo: receita.titulo,
+                conteudo: receita.conteudo,
+                isVerify: receita.isVerify,
+                idUsuario: receita.idUsuario,
+                verifyBy: receita.verifyBy,
+                dataCriacao: receita.dataCriacao,
+                ultimaAlteracao: receita.ultimaAlteracao,
+                tema: receita.correlacaoReceitas[0].tema,
+                subtemas: Array.from(subtemas),
+                ingredientes: receita.ingredientes,
+                fotos: receita.fotosReceitas?.map(foto => foto.url) || null
             });
         } catch (e) {
             return handleError(res, e.message);
