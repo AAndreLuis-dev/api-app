@@ -4,12 +4,19 @@ import helmet from 'helmet';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import userRoutes from './routes/userRoutes.js';
 import dicasRoutes from './routes/dicaRoutes.js';
 import temaRoutes from './routes/temaRoutes.js';
 import receitaRoutes from './routes/receitaRoutes.js';
 
-/* import ingredientesRoutes from './routes/ingredienteRoutes.js' */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const swaggerStaticPath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../node_modules/swagger-ui-dist'
+);
 
 const swaggerOptions = {
     definition: {
@@ -52,10 +59,12 @@ class App {
         this.app.use(helmet());
         this.app.use(express.urlencoded({ extended: true, limit: '50mb' }));
         this.app.use(express.json({ limit: '50mb' }));
-        const swaggerStaticPath = path.dirname(require.resolve('swagger-ui-dist/swagger-ui.css'));
         this.app.use('/swagger-static', express.static(swaggerStaticPath));
-
-        this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, { ...options, customCssUrl: '/swagger-static/swagger-ui.css' }));
+        this.app.use(
+            '/api-docs',
+            swaggerUi.serve,
+            swaggerUi.setup(swaggerDocs, { ...options, customCssUrl: '/swagger-static/swagger-ui.css' })
+        );
     }
 
     routes() {
