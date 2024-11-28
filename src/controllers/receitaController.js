@@ -181,22 +181,21 @@ class ReceitaController {
             const { data: receita, error: receitaError } = await supabase
                 .from('receitas')
                 .select(`
-                    *, 
-                    correlacaoReceitas(tema, subtema),
-                    ingredientes (*),
-                    fotosReceitas(url)
-                    `
-                )
+                *,
+                correlacaoReceitas(tema, subtema),
+                ingredientes (*),
+                fotosReceitas(url)
+            `)
                 .eq('id', req.params.id)
                 .single();
 
             if (!receita) return handleError(res, 'Receita não encontrada', 404);
             if (receitaError) throw receitaError;
 
-            const subtemas = new Set();
-            receita.correlacaoReceitas?.forEach(correlacao => {
-                if (correlacao.subtema) subtemas.add(correlacao.subtema);
-            });
+            const tema = receita.correlacaoReceitas?.[0]?.tema || null;
+            const subtemas = receita.correlacaoReceitas?.map(correlacao => correlacao.subtema) || [];
+            const ingredientes = receita.ingredientes || [];
+            const fotos = receita.fotosReceitas?.map(foto => foto.url) || [];
 
             return res.json({
                 id: receita.id,
@@ -207,10 +206,10 @@ class ReceitaController {
                 verifyBy: receita.verifyBy,
                 dataCriacao: receita.dataCriacao,
                 ultimaAlteracao: receita.ultimaAlteracao,
-                tema: receita.correlacaoReceitas[0].tema,
-                subtemas: Array.from(subtemas),
-                ingredientes: receita.ingredientes,
-                fotos: receita.fotosReceitas?.map(foto => foto.url) || null
+                tema,
+                subtemas,
+                ingredientes,
+                fotos
             });
         } catch (e) {
             return handleError(res, e.message);
