@@ -6,8 +6,8 @@ class ReceitaController {
     async create(req, res) {
         let imageUrls = [];
         try {
-            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema || !req.body.ingredientes) {
-                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema, subtema, ingredientes');
+            if (!req.body.titulo || !req.body.conteudo || !req.body.idUsuario || !req.body.tema || !req.body.subtema) {
+                throw new Error('Campos obrigatórios: titulo, conteudo, idUsuario, tema, subtema');
             }
 
             const { data: usuario, error: userError } = await supabase
@@ -86,16 +86,19 @@ class ReceitaController {
             }
 
             const ingredientes = req.body.ingredientes;
-            for (const ingrediente of ingredientes) {
-                const ingredienteObj = new Ingrendiente(ingrediente);
-                const { valid, errors } = ingredienteObj.validate();
-
-                if (!valid) {
-                    throw new Error(errors.join(', '));
+            if (Array.isArray(ingredientes) && ingredientes.length > 0) {
+                for (const ingrediente of ingredientes) {
+                    const ingredienteObj = new Ingrendiente(ingrediente);
+                    const { valid, errors } = ingredienteObj.validate();
+    
+                    if (!valid) {
+                        throw new Error(errors.join(', '));
+                    }
+    
+                    await ingredienteObj.save(receitaData.id);
                 }
-
-                await ingredienteObj.save(receitaData.id);
             }
+            
 
             if (req.files?.length > 0) {
                 for (const file of req.files) {
@@ -134,6 +137,7 @@ class ReceitaController {
                 }
             });
         } catch (e) {
+            console.log(e)
             return handleError(res, e.message);
         }
     }
