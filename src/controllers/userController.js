@@ -112,46 +112,48 @@ class UserController {
                 .select('*')
                 .eq('email', req.params.email)
                 .single();
-
+    
             if (fetchError || !user) {
                 return res.status(400).json({ errors: ['Usuário não encontrado'] });
             }
-
+    
             let fotoUsuarioURL = user["Foto.usu"];
-
+    
             if (req.file) {
                 const uploadResult = await uploadImage(req.file);
                 fotoUsuarioURL = uploadResult.url;
                 uploadedImagePath = uploadResult.path;
             }
-
-            const updatedData = {
-                ...req.body,
-                fotoUsu: fotoUsuarioURL
-            };
-
-            if (req.body.Senha) {
-                updatedData.Senha = await argon2.hash(req.body.Senha);
+    
+            // Prepare the data to be updated
+            const updatedData = { ...req.body, fotoUsu: fotoUsuarioURL };
+    
+            // Verificação e hash da senha
+            if (req.body.senha) {  // Use 'senha' em minúsculas
+                console.log("Hashing a senha...");
+                updatedData.senha = await argon2.hash(req.body.senha.trim());  // 'senha' em minúsculas
             }
-
+    
             const { error: updateError } = await supabase
                 .from('usuarios')
                 .update(updatedData)
                 .eq('email', req.params.email);
-
+    
             if (updateError) throw updateError;
-
+    
             return res.json({ message: 'Usuário atualizado com sucesso' });
-
+    
         } catch (e) {
+            console.error("Erro ao atualizar usuário:", e.message);
+    
             if (uploadedImagePath) {
-                await supabase.storage
-                    .from('fotoPerfil')
-                    .remove([uploadedImagePath]);
+                await supabase.storage.from('fotoPerfil').remove([uploadedImagePath]);
             }
             return res.status(400).json({ errors: [e.message] });
         }
     }
+    
+    
     // Funcionando pos alteracao
     async delete(req, res) {
         try {
@@ -180,7 +182,7 @@ class UserController {
     }
     async loginUser(req, res) {
         const { email, senha } = req.body;
-        
+    
         try {
             console.log("Iniciando login para o email:", email);
     
@@ -191,15 +193,20 @@ class UserController {
                 .single();
     
             if (error || !user) {
-                console.log("Erro ao buscar usuário ou usuário não encontrado:", error);
+                console.error("Erro ao buscar usuário ou usuário não encontrado:", error);
                 return res.status(400).json({ error: 'Usuário não encontrado ou erro na busca' });
             }
     
             console.log("Usuário encontrado:", user);
+            if (!user.senha || !user.senha.startsWith('$')) {
+                console.error("Senha inválida ou não é um hash no banco de dados.");
+                return res.status(500).json({ error: 'Erro no registro do usuário' });
+            }
     
             const validPassword = await argon2.verify(user.senha, senha);
+    
             if (!validPassword) {
-                console.log("Senha inválida para o usuário:", email);
+                console.error("Senha inválida para o usuário:", email);
                 return res.status(401).json({ error: 'Credenciais inválidas' });
             }
     
@@ -210,14 +217,15 @@ class UserController {
                 process.env.JWT_SECRET
             );
     
-            console.log("Token gerado com sucesso:");
+            console.log("Token gerado com sucesso:", token);
     
             return res.status(200).json({ message: 'Login bem-sucedido', token });
         } catch (e) {
-            console.error("Erro no processo de login:", e);
+            console.error("Erro no processo de login:", e.message);
             return res.status(500).json({ error: 'Erro interno do servidor' });
         }
     }
+    
 async resetPasswordRequest(req, res) {
     const { email } = req.body;
 
