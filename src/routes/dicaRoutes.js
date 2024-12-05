@@ -116,7 +116,7 @@ router.post('/dicas', authMiddleware, processFormData, dicaController.create);
  *       404:
  *         description: Dica não encontrada
  */
-router.put('/dicas/:id', authMiddleware, dicaController.update);
+router.put('/dicas/:id', authMiddleware, processFormData, dicaController.update);
 
 /**
  * @swagger

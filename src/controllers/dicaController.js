@@ -14,7 +14,7 @@ class DicaController {
             if (!valid) return handleError(res, errors, 400, 'Dica Inválida');
 
             const tema = req.body.tema;
-            const subtemas = req.body.subtemas ? 
+            const subtemas = req.body.subtemas ?
                 (Array.isArray(req.body.subtemas) ? req.body.subtemas : [req.body.subtemas]) : [];
 
             if (!TEMAS_VALIDOS.includes(tema)) {
@@ -169,7 +169,8 @@ class DicaController {
             if (!valid) return handleError(res, errors, 400, 'Essa dica não é válida');
 
             const tema = req.body.tema;
-            const subtemas = req.body.subtemas;
+            const subtemas = req.body.subtemas ?
+                (Array.isArray(req.body.subtemas) ? req.body.subtemas : [req.body.subtemas]) : [];
 
             const { data: updatedDica, error: updateError } = await supabase
                 .from('dicas')
@@ -181,36 +182,37 @@ class DicaController {
 
             if (updateError) return handleError(res, updateError.message, 500, updateError.details);
             if (!updatedDica) return handleError(res, `A dica com o código ${req.params.id} não foi encontrada.`, 404, 'Dica não encontrada');
-
-            for (let subtema of subtemas) {
-                const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
-                    .from('temaSubtema')
-                    .select('*')
-                    .eq('tema', tema)
-                    .eq('subtema', subtema);
-
-                if (temaSubtemaError) return handleError(res, temaSubtemaError.message, 500, 'Erro ao verificar relação tema-subtema');
-
-                if (temaSubtemaData.length === 0) {
-                    const { error: insertTemaSubtemaError } = await supabase
+            if (subtemas.length > 0) {
+                for (let subtema of subtemas) {
+                    const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
                         .from('temaSubtema')
-                        .insert({
+                        .select('*')
+                        .eq('tema', tema)
+                        .eq('subtema', subtema);
+
+                    if (temaSubtemaError) return handleError(res, temaSubtemaError.message, 500, 'Erro ao verificar relação tema-subtema');
+
+                    if (temaSubtemaData.length === 0) {
+                        const { error: insertTemaSubtemaError } = await supabase
+                            .from('temaSubtema')
+                            .insert({
+                                tema: tema,
+                                subtema: subtema,
+                            });
+
+                        if (insertTemaSubtemaError) return handleError(res, insertTemaSubtemaError.message, 500, 'Erro ao atualizar relação tema-subtema');
+                    }
+
+                    const { error: updateCorrelacaoError } = await supabase
+                        .from('correlacaoDicas')
+                        .upsert({
+                            idDicas: req.params.id,
                             tema: tema,
                             subtema: subtema,
                         });
 
-                    if (insertTemaSubtemaError) return handleError(res, insertTemaSubtemaError.message, 500, 'Erro ao atualizar relação tema-subtema');
+                    if (updateCorrelacaoError) return handleError(res, updateCorrelacaoError.message, 500, updateCorrelacaoError.details);
                 }
-
-                const { error: updateCorrelacaoError } = await supabase
-                    .from('correlacaoDicas')
-                    .upsert({
-                        idDicas: req.params.id,
-                        tema: tema,
-                        subtema: subtema,
-                    });
-
-                if (updateCorrelacaoError) return handleError(res, updateCorrelacaoError.message, 500, updateCorrelacaoError.details);
             }
 
             return res.status(200).json({ message: 'Dica e correlações atualizadas com sucesso', data: updatedDica[0] });
