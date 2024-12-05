@@ -8,14 +8,14 @@ class DicaController {
 
     async create(req, res) {
         try {
-            console.log(req.body);
             const dica = new Dica(req.body);
             const { valid, errors } = dica.validate();
 
             if (!valid) return handleError(res, errors, 400, 'Dica Inválida');
 
             const tema = req.body.tema;
-            const subtemas = req.body.subtemas;
+            const subtemas = req.body.subtemas ? 
+                (Array.isArray(req.body.subtemas) ? req.body.subtemas : [req.body.subtemas]) : [];
 
             if (!TEMAS_VALIDOS.includes(tema)) {
                 return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Tema inválido');

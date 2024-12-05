@@ -1,8 +1,29 @@
 import { Router } from 'express';
 import dicaController from '../controllers/dicaController.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
+import multer from 'multer';
 
 const router = new Router();
+// Configuração do Multer
+const upload = multer();
+
+// Middleware para processar form-data
+const processFormData = (req, res, next) => {
+    upload.array('subtemas', 5)(req, res, function (err) {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({
+                message: 'Erro',
+                detail: err.message
+            });
+        } else if (err) {
+            return res.status(500).json({
+                message: 'Erro',
+                detail: err.message
+            });
+        }
+        next();
+    });
+};
 
 /**
  * @swagger
@@ -51,7 +72,7 @@ router.get('/dicas', dicaController.getAll);
  *       400:
  *         description: Erro ao criar a dica
  */
-router.post('/dicas', authMiddleware, dicaController.create);
+router.post('/dicas', authMiddleware, processFormData, dicaController.create);
 
 /**
  * @swagger
