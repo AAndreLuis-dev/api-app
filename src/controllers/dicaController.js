@@ -116,7 +116,8 @@ class DicaController {
                     dataCriacao: dica.dataCriacao,
                     ultimaAlteracao: dica.ultimaAlteracao,
                     tema: dica.correlacaoDicas?.[0]?.tema || null,
-                    subtemas: Array.from(subtemas)
+                    subtemas: Array.from(subtemas),
+                    isCreatedBySpecialist: dica.isCreatedBySpecialist
                 };
             }));
 
@@ -331,7 +332,8 @@ class DicaController {
                     dataCriacao: dica.dataCriacao,
                     ultimaAlteracao: dica.ultimaAlteracao,
                     tema: dica.correlacaoDicas?.[0]?.tema || null,
-                    subtemas: Array.from(subtemas)
+                    subtemas: Array.from(subtemas),
+                    isCreatedBySpecialist: dica.isCreatedBySpecialist
                 };
             }));
 
@@ -384,7 +386,8 @@ class DicaController {
                     dataCriacao: dica.dataCriacao,
                     ultimaAlteracao: dica.ultimaAlteracao,
                     tema: dica.correlacaoDicas?.[0]?.tema || null,
-                    subtemas: Array.from(subtemas)
+                    subtemas: Array.from(subtemas),
+                    isCreatedBySpecialist: dica.isCreatedBySpecialist
                 };
             }));
 
@@ -436,7 +439,8 @@ class DicaController {
                     dataCriacao: dica.dataCriacao,
                     ultimaAlteracao: dica.ultimaAlteracao,
                     tema: dica.correlacaoDicas?.[0]?.tema || null,
-                    subtemas: Array.from(subtemas)
+                    subtemas: Array.from(subtemas),
+                    isCreatedBySpecialist: dica.isCreatedBySpecialist
                 };
             }));
 
@@ -504,7 +508,65 @@ class DicaController {
                     dataCriacao: dica.dataCriacao,
                     ultimaAlteracao: dica.ultimaAlteracao,
                     tema: dica.correlacaoDicas?.[0]?.tema || null,
-                    subtemas: Array.from(subtemas)
+                    subtemas: Array.from(subtemas), isCreatedBySpecialist: dica.isCreatedBySpecialist
+                };
+            }));
+
+            return res.json(dicasComDetalhes);
+        } catch (e) {
+            console.error('Erro ao buscar dicas por subtemas:', e);
+            return res.status(500).json({ error: `Erro interno ao processar a solicitação: ${e.message}` });
+        }
+    }
+
+    // isCreatedBySpecialist
+    async getSpecialistsDica(req, res) {
+        try {
+
+            const { tema } = req.params;
+
+            if (!TEMAS_VALIDOS.includes(tema)) {
+                return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Input inválido');
+            }
+
+            const { data: idPost, error: idPostError } = await supabase
+                .from('correlacaoDicas')
+                .select('idDicas')
+                .eq('tema', tema)
+                .order('id', { ascending: false });
+
+            if (idPostError) return handleError(res, idPostError.message, 500, idPostError.details);
+            if (!idPost) return handleError(res, 'Nenhuma receita encontrada', 404);
+
+            const { data: dicas, error } = await supabase
+                .from('dicas')
+                .select('*, correlacaoDicas(*)')
+                .in('id', idPost.map(post => post.idDicas))
+                .eq('isCreatedBySpecialist', true)
+                .order('id', { ascending: false });
+
+            if (error) return handleError(res, error.message, 500, error.details);
+
+
+            const dicasComDetalhes = await Promise.all(dicas.map(async (dica) => {
+                const subtemas = new Set();
+
+                dica.correlacaoDicas?.forEach(correlacao => {
+                    if (correlacao.subtema) subtemas.add(correlacao.subtema);
+                });
+
+                return {
+                    id: dica.id,
+                    titulo: dica.titulo,
+                    conteudo: dica.conteudo,
+                    isVerify: dica.isVerify,
+                    idUsuario: dica.idUsuario,
+                    verifyBy: dica.verifyBy,
+                    dataCriacao: dica.dataCriacao,
+                    ultimaAlteracao: dica.ultimaAlteracao,
+                    tema: dica.correlacaoDicas?.[0]?.tema || null,
+                    subtemas: Array.from(subtemas),
+                    isCreatedBySpecialist: dica.isCreatedBySpecialist
                 };
             }));
 
@@ -517,6 +579,7 @@ class DicaController {
 }
 
 function handleError(res, detail = 'An error has occurred.', status = 500, message = 'Internal Server Error') {
+    console.log(`Error: ${message} - ${detail}`);
     if (!res.headersSent) {
         return res.status(status).json({ message, detail });
     }

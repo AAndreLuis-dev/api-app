@@ -277,4 +277,6 @@ router.get('/:tema/dicas/nao-verificadas', dicaController.getAllNotVerifiedByThe
  */
 router.get('/dicas/:tema/:subtema', dicaController.getDica);
 
+router.get('/:tema/dicas/especialistas', dicaController.getSpecialistsDica);
+
 export default router;
