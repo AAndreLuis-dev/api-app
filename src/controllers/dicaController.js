@@ -14,19 +14,47 @@ class DicaController {
             if (!valid) return handleError(res, errors, 400, 'Dica Inválida');
 
             const tema = req.body.tema;
-            const subtemas = req.body.subtemas ?
-                (Array.isArray(req.body.subtemas) ? req.body.subtemas : [req.body.subtemas]) : [];
+            const subtemas = req.body.subtemas
+                ? (Array.isArray(req.body.subtemas) ? req.body.subtemas : [req.body.subtemas])
+                : [];
+            const titulo = req.body.titulo;
+
+            // Verifica se o título foi enviado
+            if (!titulo || titulo.trim() === '') {
+                return handleError(res, 'O campo "titulo" é obrigatório.', 400, 'Campo faltando');
+            }
 
             if (!TEMAS_VALIDOS.includes(tema)) {
                 return handleError(res, `O tema ${tema} não é um tema válido. Temas válidos: ${TEMAS_VALIDOS.join(', ')}.`, 400, 'Tema inválido');
             }
 
+            const { data: usuarioData, error: usuarioError } = await supabase
+                .from('usuarios')
+                .select('isMonitor')
+                .eq('email', dica.usuarioId)
+                .single();
+
+            if (usuarioError) {
+                return handleError(res, usuarioError.message, 500, 'Erro ao verificar usuário');
+            }
+
+            const isCreatedBySpecialist = usuarioData?.isMonitor || false;
+
             const { data: dicaData, error: dicaError } = await supabase
                 .from('dicas')
                 .insert({
-                    usuarioId: dica.usuarioId,
+                    usuarioid: dica.usuarioId,
                     conteudo: dica.conteudo,
-                }).select();
+                    titulo: titulo,
+                    isVerify: false,
+                    verifyBy: null,
+                    dataCriacao: new Date(),
+                    ultimaAlteracao: new Date(),
+                    iscreatedbyspecialist: isCreatedBySpecialist,
+                })
+                .select();
+
+            if (dicaError) return handleError(res, dicaError.message, 500, dicaError.details);
 
             const subtemaObj = new Subtema(subtemas);
             if (subtemas.length > 0) {
@@ -35,8 +63,6 @@ class DicaController {
                 if (resultadoSubtema.erros.length > 0) {
                     return handleError(res, resultadoSubtema.erros, 400, 'Erro ao processar subtemas');
                 }
-
-                if (dicaError) return handleError(res, dicaError.message, 500, dicaError.details);
 
                 for (let subtema of subtemas) {
                     const { data: temaSubtemaData, error: temaSubtemaError } = await supabase
@@ -77,7 +103,7 @@ class DicaController {
                     .from('correlacaoDicas')
                     .insert({
                         idDicas: dicaData[0].id,
-                        tema: tema
+                        tema: tema,
                     });
 
                 if (correlacaoError) return handleError(res, correlacaoError.message, 500, correlacaoError.details);
