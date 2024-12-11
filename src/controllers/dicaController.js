@@ -19,7 +19,6 @@ class DicaController {
                 : [];
             const titulo = req.body.titulo;
 
-            // Verifica se o título foi enviado
             if (!titulo || titulo.trim() === '') {
                 return handleError(res, 'O campo "titulo" é obrigatório.', 400, 'Campo faltando');
             }
@@ -587,7 +586,6 @@ class DicaController {
         }
     }
 
-    // isCreatedBySpecialist
     async getSpecialistsDica(req, res) {
         try {
 
@@ -610,7 +608,7 @@ class DicaController {
                 .from('dicas')
                 .select('*, correlacaoDicas(*)')
                 .in('id', idPost.map(post => post.idDicas))
-                .eq('isCreatedBySpecialist', true)
+                .eq('iscreatedbyspecialist', true)
                 .order('id', { ascending: false });
 
             if (error) return handleError(res, error.message, 500, error.details);
